@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Crear cuenta</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card animate-slide-up">
+
+    <div class="auth-card__title">🎰 VirtualBet</div>
+    <div class="auth-card__subtitle">Creá tu cuenta — ¡1,000 monedas de regalo!</div>
+
+    <form class="auth-card__form" id="registerForm">
+
+      <div class="form-group">
+        <label class="form-label" for="username">Nombre de usuario</label>
+        <input
+          class="form-input"
+          type="text"
+          id="username"
+          placeholder="jugador123"
+          minlength="3"
+          maxlength="20"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input
+          class="form-input"
+          type="email"
+          id="email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Contraseña</label>
+        <input
+          class="form-input"
+          type="password"
+          id="password"
+          placeholder="Mín. 8 chars, 1 mayúscula, 1 número"
+          autocomplete="new-password"
+          required
+        />
+      </div>
+
+      <!-- Lista de errores del servidor -->
+      <div id="errorList" style="display:none;">
+        <ul id="errorItems" style="color:#fca5a5;font-size:0.85rem;padding-left:1rem;"></ul>
+      </div>
+
+      <button type="submit" class="btn btn--orange btn--full btn--lg" id="submitBtn">
+        Crear cuenta gratis
+      </button>
+
+    </form>
+
+    <div class="auth-card__footer">
+      ¿Ya tenés cuenta?
+      <a href="./login.html">Iniciá sesión</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+  if (Auth.isLoggedIn()) {
+    window.location.href = './dashboard.html';
+  }
+
+  const form      = document.getElementById('registerForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorList = document.getElementById('errorList');
+  const errorItems = document.getElementById('errorItems');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorList.style.display = 'none';
+    errorItems.innerHTML    = '';
+
+    const username = document.getElementById('username').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Creando cuenta...';
+
+    try {
+      const data = await VB.auth.register({ username, email, password });
+
+      Auth.setSession(data.token, data.user);
+      showToast('¡Cuenta creada! Bienvenido/a 🎉', 'success');
+
+      setTimeout(() => {
+        window.location.href = './dashboard.html';
+      }, 800);
+
+    } catch (err) {
+      // El servidor puede devolver array de errores de validación
+      if (err.message.includes('errors')) {
+        try {
+          const parsed = JSON.parse(err.message);
+          parsed.forEach(e => {
+            const li = document.createElement('li');
+            li.textContent = e.msg;
+            errorItems.appendChild(li);
+          });
+        } catch {
+          const li = document.createElement('li');
+          li.textContent = err.message;
+          errorItems.appendChild(li);
+        }
+      } else {
+        const li = document.createElement('li');
+        li.textContent = err.message;
+        errorItems.appendChild(li);
+      }
+
+      errorList.style.display = 'block';
+      submitBtn.disabled      = false;
+      submitBtn.textContent   = 'Crear cuenta gratis';
+    }
+  });
+</script>
+
+</body>
+</html>

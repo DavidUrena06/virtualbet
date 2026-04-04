@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Dashboard</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar__logo">🎰 VirtualBet</div>
+
+  <div class="navbar__nav">
+    <a href="./dashboard.html" class="navbar__link active">Casino</a>
+    <a href="./sports.html"    class="navbar__link">Deportes</a>
+    <a href="./history.html"   class="navbar__link">Historial</a>
+    <a href="./profile.html"   class="navbar__link">Perfil</a>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="navbar__balance">
+      🪙 <span id="navBalance">—</span>
+    </div>
+    <button class="btn btn--ghost" onclick="logout()" style="padding:6px 14px;font-size:0.85rem;">
+      Salir
+    </button>
+  </div>
+</nav>
+
+<!-- Contenido -->
+<main class="container page">
+
+  <!-- Bienvenida + stats rápidos -->
+  <div style="margin-bottom:2rem;">
+    <h1 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem;">
+      Bienvenido, <span id="username" style="color:var(--purple-light);">...</span> 👋
+    </h1>
+    <p style="color:var(--text-secondary);">¿Qué querés jugar hoy?</p>
+  </div>
+
+  <!-- Stats del usuario -->
+  <div class="stats-grid" style="margin-bottom:2.5rem;">
+    <div class="stat-card">
+      <div class="stat-card__label">Balance actual</div>
+      <div class="stat-card__value stat-card__value--green" id="balance">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Total apostado</div>
+      <div class="stat-card__value stat-card__value--purple" id="totalWagered">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Total ganado</div>
+      <div class="stat-card__value stat-card__value--gold" id="totalWon">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Partidas jugadas</div>
+      <div class="stat-card__value" id="gamesPlayed">—</div>
+    </div>
+  </div>
+
+  <!-- Lobby de juegos -->
+  <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+    Juegos del casino
+  </h2>
+
+  <div class="games-grid" style="margin-bottom:3rem;">
+
+    <div class="card card--game" onclick="goTo('dice.html')">
+      <span class="game-icon">🎲</span>
+      <div class="game-name">Dice</div>
+      <div class="game-desc">Predecí el resultado del dado</div>
+      <div class="game-edge">House edge: 1%</div>
+    </div>
+
+    <div class="card card--game" onclick="goTo('coinflip.html')">
+      <span class="game-icon">🪙</span>
+      <div class="game-name">Coinflip</div>
+      <div class="game-desc">Cara o cruz, 50/50</div>
+      <div class="game-edge">House edge: 2%</div>
+    </div>
+
+    <div class="card card--game" onclick="goTo('crash.html')">
+      <span class="game-icon">📈</span>
+      <div class="game-name">Crash</div>
+      <div class="game-desc">Retirá antes del crash</div>
+      <div class="game-edge">House edge: 3%</div>
+    </div>
+
+    <div class="card card--game" onclick="goTo('mines.html')" style="opacity:0.6;pointer-events:none;">
+      <span class="game-icon">💣</span>
+      <div class="game-name">Mines</div>
+      <div class="game-desc">Evitá las minas</div>
+      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
+    </div>
+
+    <div class="card card--game" onclick="goTo('plinko.html')" style="opacity:0.6;pointer-events:none;">
+      <span class="game-icon">🔵</span>
+      <div class="game-name">Plinko</div>
+      <div class="game-desc">La bolita cae</div>
+      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
+    </div>
+
+    <div class="card card--game" onclick="goTo('roulette.html')" style="opacity:0.6;pointer-events:none;">
+      <span class="game-icon">🎡</span>
+      <div class="game-name">Ruleta</div>
+      <div class="game-desc">Rueda europea</div>
+      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
+    </div>
+
+  </div>
+
+  <!-- Apuestas deportivas preview -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+      Apuestas deportivas
+    </h2>
+    <a href="./sports.html" class="btn btn--ghost" style="font-size:0.85rem;padding:6px 14px;">
+      Ver todos →
+    </a>
+  </div>
+
+  <div id="matchesPreview">
+    <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando partidos...</div>
+  </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script>
+  requireLogin();
+
+  const user = Auth.getUser();
+
+  // ─── Carga datos al inicio ─────────────────────────────────────────────────
+  async function loadDashboard() {
+    try {
+      const [profileData, walletData] = await Promise.all([
+        VB.user.profile(),
+        VB.wallet.balance(),
+      ]);
+
+      const profile = profileData.user;
+      const wallet  = walletData.wallet;
+
+      // Nombre
+      document.getElementById('username').textContent = profile.username;
+
+      // Balance en navbar
+      document.getElementById('navBalance').textContent =
+        parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+      // Stats
+      document.getElementById('balance').textContent =
+        parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
+      document.getElementById('totalWagered').textContent =
+        parseFloat(wallet.totalWagered).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
+      document.getElementById('totalWon').textContent =
+        parseFloat(wallet.totalWon).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
+      document.getElementById('gamesPlayed').textContent =
+        (profile._count?.gameHistory || 0).toLocaleString();
+
+    } catch (err) {
+      showToast('Error al cargar el perfil', 'error');
+    }
+  }
+
+  async function loadMatchesPreview() {
+    try {
+      const data = await VB.betting.matches('', 'UPCOMING');
+      const container = document.getElementById('matchesPreview');
+
+      if (!data.matches.length) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;color:var(--text-muted);">
+            No hay partidos disponibles por ahora. El admin los publica pronto.
+          </div>`;
+        return;
+      }
+
+      const preview = data.matches.slice(0, 3);
+      container.innerHTML = preview.map(m => `
+        <div class="card" style="margin-bottom:0.75rem;cursor:pointer;"
+             onclick="window.location.href='./sports.html'">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;
+                          letter-spacing:1px;margin-bottom:4px;">${m.league}</div>
+              <div style="font-weight:700;font-size:1rem;">
+                ${m.teamHome} <span style="color:var(--text-muted)">vs</span> ${m.teamAway}
+              </div>
+              <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">
+                ${new Date(m.startsAt).toLocaleString('es-CR')}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="text-align:center;background:var(--bg-secondary);
+                          border-radius:var(--radius-sm);padding:6px 12px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);">LOCAL</div>
+                <div style="font-weight:800;color:var(--green-neon);">${parseFloat(m.oddHome).toFixed(2)}</div>
+              </div>
+              <div style="text-align:center;background:var(--bg-secondary);
+                          border-radius:var(--radius-sm);padding:6px 12px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);">EMPATE</div>
+                <div style="font-weight:800;color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</div>
+              </div>
+              <div style="text-align:center;background:var(--bg-secondary);
+                          border-radius:var(--radius-sm);padding:6px 12px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);">VISITA</div>
+                <div style="font-weight:800;color:var(--blue-accent);">${parseFloat(m.oddAway).toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+    } catch {
+      document.getElementById('matchesPreview').innerHTML =
+        `<div class="card" style="color:var(--text-muted);text-align:center;">
+           No se pudieron cargar los partidos
+         </div>`;
+    }
+  }
+
+  function goTo(page) {
+    window.location.href = `./${page}`;
+  }
+
+  function logout() {
+    Auth.clear();
+    window.location.href = './login.html';
+  }
+
+  // Inicializa
+  loadDashboard();
+  loadMatchesPreview();
+</script>
+
+</body>
+</html>

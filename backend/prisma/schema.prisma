@@ -1,0 +1,251 @@
+// VirtualBet - Schema completo de base de datos
+// Conecta con Supabase PostgreSQL via DATABASE_URL en .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── USUARIOS ───────────────────────────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+  isBanned     Boolean  @default(false) @map("is_banned")
+  banReason    String?  @map("ban_reason")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  wallet        Wallet?
+  transactions  Transaction[]
+  gameHistory   GameHistory[]
+  bets          Bet[]
+  adminLogsTarget AdminLog[] @relation("TargetUser")
+  adminLogsBy   AdminLog[]   @relation("AdminUser")
+  coinSchedules CoinSchedule[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+// ─── WALLET (BALANCE DE MONEDAS) ────────────────────────────────────────────
+model Wallet {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  balance       Decimal  @default(0) @db.Decimal(18, 2)
+  totalWagered  Decimal  @default(0) @map("total_wagered") @db.Decimal(18, 2)
+  totalWon      Decimal  @default(0) @map("total_won") @db.Decimal(18, 2)
+  totalDeposited Decimal @default(0) @map("total_deposited") @db.Decimal(18, 2)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+// ─── TRANSACCIONES (LEDGER COMPLETO) ────────────────────────────────────────
+model Transaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  walletId      String          @map("wallet_id")
+  type          TransactionType
+  amount        Decimal         @db.Decimal(18, 2)
+  balanceBefore Decimal         @map("balance_before") @db.Decimal(18, 2)
+  balanceAfter  Decimal         @map("balance_after") @db.Decimal(18, 2)
+  reference     String?         // ID del juego o apuesta relacionada
+  note          String?         // Descripción legible
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  // Relaciones
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  ADMIN_DEPOSIT    // Admin da monedas
+  ADMIN_WITHDRAW   // Admin quita monedas
+  GAME_BET         // Apuesta en juego
+  GAME_WIN         // Ganancia de juego
+  SPORT_BET        // Apuesta deportiva
+  SPORT_WIN        // Ganancia deportiva
+  SPORT_REFUND     // Reembolso de apuesta (partido cancelado)
+  SCHEDULED_BONUS  // Recarga automática programada
+}
+
+// ─── HISTORIAL DE JUEGOS ────────────────────────────────────────────────────
+model GameHistory {
+  id         String     @id @default(uuid())
+  userId     String     @map("user_id")
+  gameType   GameType   @map("game_type")
+  betAmount  Decimal    @map("bet_amount") @db.Decimal(18, 2)
+  multiplier Decimal    @db.Decimal(10, 4)
+  payout     Decimal    @db.Decimal(18, 2)
+  result     GameResult
+  gameData   Json       @map("game_data") // datos específicos del juego (semilla, celdas, etc.)
+  playedAt   DateTime   @default(now()) @map("played_at")
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("game_history")
+}
+
+enum GameType {
+  DICE
+  COINFLIP
+  CRASH
+  MINES
+  PLINKO
+  PUMP
+  ROULETTE
+}
+
+enum GameResult {
+  WIN
+  LOSS
+  REFUND
+}
+
+// ─── PARTIDOS DEPORTIVOS ─────────────────────────────────────────────────────
+model Match {
+  id           String      @id @default(uuid())
+  league       String      // "LDA", "LA_LIGA", "PREMIER", etc.
+  teamHome     String      @map("team_home")
+  teamAway     String      @map("team_away")
+  oddHome      Decimal     @map("odd_home") @db.Decimal(6, 2)
+  oddDraw      Decimal     @map("odd_draw") @db.Decimal(6, 2)
+  oddAway      Decimal     @map("odd_away") @db.Decimal(6, 2)
+  status       MatchStatus @default(UPCOMING)
+  result       MatchResult? // null hasta que el admin resuelve
+  scoreHome    Int?        @map("score_home")
+  scoreAway    Int?        @map("score_away")
+  startsAt     DateTime    @map("starts_at")
+  resolvedAt   DateTime?   @map("resolved_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  // Relaciones
+  bets Bet[]
+
+  @@map("matches")
+}
+
+enum MatchStatus {
+  UPCOMING  // Aceptando apuestas
+  LIVE      // Partido en curso, apuestas cerradas
+  FINISHED  // Resuelto
+  CANCELLED // Reembolso
+}
+
+enum MatchResult {
+  HOME
+  DRAW
+  AWAY
+}
+
+// ─── APUESTAS DEPORTIVAS ─────────────────────────────────────────────────────
+model Bet {
+  id           String     @id @default(uuid())
+  userId       String     @map("user_id")
+  matchId      String     @map("match_id")
+  selection    BetSelection
+  amount       Decimal    @db.Decimal(18, 2)
+  oddAtBet     Decimal    @map("odd_at_bet") @db.Decimal(6, 2) // cuota al momento de apostar
+  potentialWin Decimal    @map("potential_win") @db.Decimal(18, 2)
+  status       BetStatus  @default(PENDING)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  resolvedAt   DateTime?  @map("resolved_at")
+
+  // Relaciones
+  user  User  @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@map("bets")
+}
+
+enum BetSelection {
+  HOME
+  DRAW
+  AWAY
+}
+
+enum BetStatus {
+  PENDING  // Esperando resultado
+  WON
+  LOST
+  REFUNDED
+}
+
+// ─── LOGS DEL ADMINISTRADOR ──────────────────────────────────────────────────
+model AdminLog {
+  id           String   @id @default(uuid())
+  adminId      String   @map("admin_id")
+  action       String   // "BAN_USER", "GIVE_COINS", "CREATE_MATCH", etc.
+  targetUserId String?  @map("target_user_id")
+  payload      Json?    // datos adicionales de la acción
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  admin      User  @relation("AdminUser", fields: [adminId], references: [id])
+  targetUser User? @relation("TargetUser", fields: [targetUserId], references: [id])
+
+  @@map("admin_logs")
+}
+
+// ─── PROGRAMACIÓN DE RECARGAS ────────────────────────────────────────────────
+model CoinSchedule {
+  id           String       @id @default(uuid())
+  createdById  String       @map("created_by_id")
+  name         String       // descripción legible
+  targetType   TargetType   @map("target_type")
+  targetUserId String?      @map("target_user_id") // null = todos los usuarios
+  amount       Decimal      @db.Decimal(18, 2)
+  cronExpr     String       @map("cron_expr") // "0 0 1 * *" = cada 1ro del mes
+  isActive     Boolean      @default(true) @map("is_active")
+  lastRun      DateTime?    @map("last_run")
+  nextRun      DateTime?    @map("next_run")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // Relaciones
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("coin_schedules")
+}
+
+enum TargetType {
+  ALL_USERS
+  SPECIFIC_USER
+}
+
+// ─── SESIONES (para invalidar JWT si se banea) ──────────────────────────────
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
