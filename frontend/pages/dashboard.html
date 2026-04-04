@@ -32,7 +32,7 @@
 <!-- Contenido -->
 <main class="container page">
 
-  <!-- Bienvenida + stats rápidos -->
+  <!-- Bienvenida -->
   <div style="margin-bottom:2rem;">
     <h1 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem;">
       Bienvenido, <span id="username" style="color:var(--purple-light);">...</span> 👋
@@ -71,42 +71,36 @@
       <span class="game-icon">🎲</span>
       <div class="game-name">Dice</div>
       <div class="game-desc">Predecí el resultado del dado</div>
-      <div class="game-edge">House edge: 1%</div>
     </div>
 
     <div class="card card--game" onclick="goTo('coinflip.html')">
       <span class="game-icon">🪙</span>
       <div class="game-name">Coinflip</div>
       <div class="game-desc">Cara o cruz, 50/50</div>
-      <div class="game-edge">House edge: 2%</div>
     </div>
 
     <div class="card card--game" onclick="goTo('crash.html')">
       <span class="game-icon">📈</span>
       <div class="game-name">Crash</div>
       <div class="game-desc">Retirá antes del crash</div>
-      <div class="game-edge">House edge: 3%</div>
     </div>
 
-    <div class="card card--game" onclick="goTo('mines.html')" style="opacity:0.6;pointer-events:none;">
+    <div class="card card--game" onclick="goTo('mines.html')">
       <span class="game-icon">💣</span>
       <div class="game-name">Mines</div>
       <div class="game-desc">Evitá las minas</div>
-      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
     </div>
 
-    <div class="card card--game" onclick="goTo('plinko.html')" style="opacity:0.6;pointer-events:none;">
+    <div class="card card--game" onclick="goTo('plinko.html')">
       <span class="game-icon">🔵</span>
       <div class="game-name">Plinko</div>
       <div class="game-desc">La bolita cae</div>
-      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
     </div>
 
-    <div class="card card--game" onclick="goTo('roulette.html')" style="opacity:0.6;pointer-events:none;">
+    <div class="card card--game" onclick="goTo('roulette.html')">
       <span class="game-icon">🎡</span>
       <div class="game-name">Ruleta</div>
       <div class="game-desc">Rueda europea</div>
-      <div class="game-edge" style="color:var(--orange);">Próximamente</div>
     </div>
 
   </div>
@@ -133,7 +127,6 @@
 
   const user = Auth.getUser();
 
-  // ─── Carga datos al inicio ─────────────────────────────────────────────────
   async function loadDashboard() {
     try {
       const [profileData, walletData] = await Promise.all([
@@ -144,14 +137,11 @@
       const profile = profileData.user;
       const wallet  = walletData.wallet;
 
-      // Nombre
       document.getElementById('username').textContent = profile.username;
 
-      // Balance en navbar
       document.getElementById('navBalance').textContent =
         parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 });
 
-      // Stats
       document.getElementById('balance').textContent =
         parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
       document.getElementById('totalWagered').textContent =
@@ -174,7 +164,7 @@
       if (!data.matches.length) {
         container.innerHTML = `
           <div class="card" style="text-align:center;color:var(--text-muted);">
-            No hay partidos disponibles por ahora. El admin los publica pronto.
+            No hay partidos disponibles por ahora.
           </div>`;
         return;
       }
@@ -232,7 +222,6 @@
     window.location.href = './login.html';
   }
 
-  // Inicializa
   loadDashboard();
   loadMatchesPreview();
 </script>
