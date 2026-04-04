@@ -10,28 +10,23 @@ const { PrismaClient } = require('@prisma/client');
 
 // ─── Inicialización ──────────────────────────────────────────────────────────
 const app    = express();
-app.set('trust proxy', 1); // Si estás detrás de un proxy (como Heroku), esto es necesario para rate limiting y CORS
+app.set('trust proxy', 1);
 const prisma = new PrismaClient();
 const PORT   = process.env.PORT || 3000;
 
 // ─── Seguridad base (helmet) ──────────────────────────────────────────────────
-// Configura headers HTTP seguros automáticamente
 app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-// Solo permite requests desde el frontend autorizado
-console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
-console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5500',
   'http://127.0.0.1:5500',
   'http://localhost:3001',
-];
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permite requests sin origin en desarrollo (Postman, curl, etc.)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -39,14 +34,16 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// Responde preflight OPTIONS explícitamente
+app.options('*', cors());
+
 // ─── Rate limiting global ─────────────────────────────────────────────────────
-// Limita requests totales por IP
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
   message: { error: 'Demasiados requests. Intentá de nuevo en 15 minutos.' },
   standardHeaders: true,
@@ -65,10 +62,10 @@ const authLimiter = rateLimit({
 app.use(globalLimiter);
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10kb' })); // Limita tamaño del body
+app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 
-// ─── Health check (para UptimeRobot, mantiene el servidor despierto) ──────────
+// ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -101,17 +98,14 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error(`[ERROR] ${err.message}`);
 
-  // Error de CORS
   if (err.message === 'Bloqueado por CORS') {
     return res.status(403).json({ error: 'Origen no permitido' });
   }
 
-  // Error de Prisma (BD)
   if (err.code?.startsWith('P')) {
     return res.status(400).json({ error: 'Error en la base de datos' });
   }
 
-  // Error genérico
   const status = err.statusCode || 500;
   const message = process.env.NODE_ENV === 'production'
     ? 'Error interno del servidor'
@@ -123,11 +117,9 @@ app.use((err, req, res, next) => {
 // ─── Inicio del servidor ──────────────────────────────────────────────────────
 async function start() {
   try {
-    // Verifica conexión con la base de datos
     await prisma.$connect();
     console.log('✅ Conectado a PostgreSQL (Supabase)');
 
-    // Inicia los cron jobs de recargas automáticas
     require('./cron/scheduler');
     console.log('✅ Cron jobs iniciados');
 
@@ -144,7 +136,6 @@ async function start() {
 
 start();
 
-// Cierra conexión de BD limpiamente al detener el proceso
 process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
