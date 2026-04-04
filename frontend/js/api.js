@@ -2,7 +2,7 @@
 // Cliente HTTP del frontend — maneja JWT, errores y base URL automáticamente
 // Importar este archivo en todas las páginas antes de usar fetch
 
-const API_BASE = 'https://virtualbet-api.onrender.com/api';
+const API_BASE = 'https://virtualbet.onrender.com/api';
 // En desarrollo local: const API_BASE = 'http://localhost:3000/api';
 
 // ─── Manejo de sesión local ───────────────────────────────────────────────────
