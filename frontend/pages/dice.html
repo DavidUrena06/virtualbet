@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Dice</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    .dice-display {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .dice-display::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(124,58,237,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Slider de target */
+    .dice-slider-wrap {
+      position: relative;
+      padding: 1rem 0 0.5rem;
+    }
+    .dice-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+      background: var(--border);
+    }
+    .dice-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-light);
+      border: 3px solid var(--bg-primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(124,58,237,0.5);
+    }
+    .dice-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-light);
+      border: 3px solid var(--bg-primary);
+      cursor: pointer;
+    }
+
+    /* Barra de probabilidad con color dinámico */
+    .prob-bar {
+      height: 6px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+      transition: all 0.2s ease;
+    }
+
+    /* Resultado animado */
+    .roll-number {
+      font-size: 6rem;
+      font-weight: 900;
+      line-height: 1;
+      transition: all 0.3s ease;
+      font-variant-numeric: tabular-nums;
+    }
+    .roll-number.rolling {
+      animation: rollFlicker 0.5s steps(1) infinite;
+    }
+    @keyframes rollFlicker {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+    @keyframes winPulse {
+      0%   { text-shadow: 0 0 20px rgba(0,255,136,0.8); }
+      50%  { text-shadow: 0 0 60px rgba(0,255,136,1); }
+      100% { text-shadow: 0 0 20px rgba(0,255,136,0.8); }
+    }
+    @keyframes lossPulse {
+      0%   { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
+      50%  { text-shadow: 0 0 60px rgba(239,68,68,1); }
+      100% { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
+    }
+    .roll-number.win  { color: var(--green-neon); animation: winPulse 1s ease infinite; }
+    .roll-number.loss { color: var(--red-accent);  animation: lossPulse 1s ease infinite; }
+
+    /* Toggle OVER / UNDER */
+    .direction-toggle {
+      display: flex;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .direction-toggle button {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 1px;
+    }
+    .direction-toggle button.active {
+      background: var(--purple);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="../dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">🎲 Dice</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
+</nav>
+
+<main class="container page">
+  <div class="game-area">
+
+    <!-- Display principal del dado -->
+    <div class="dice-display" style="margin-bottom:1.5rem;">
+      <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;
+                  letter-spacing:2px;margin-bottom:1rem;">Resultado</div>
+
+      <div class="roll-number" id="rollDisplay">—</div>
+
+      <div id="resultLabel" style="margin-top:1rem;font-size:1rem;font-weight:600;
+                                   color:var(--text-muted);min-height:28px;">
+        Tirá el dado
+      </div>
+
+      <!-- Barra de zona ganadora/perdedora -->
+      <div style="margin-top:1.5rem;">
+        <div style="display:flex;justify-content:space-between;
+                    font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">
+          <span>0</span>
+          <span id="targetLabel" style="color:var(--purple-light);font-weight:700;">Target: 50</span>
+          <span>100</span>
+        </div>
+        <div style="position:relative;height:6px;border-radius:3px;
+                    overflow:hidden;background:var(--border);">
+          <div id="winZone" style="position:absolute;top:0;height:100%;
+                                   background:rgba(0,255,136,0.4);border-radius:3px;
+                                   transition:all 0.2s ease;"></div>
+          <div id="targetMarker" style="position:absolute;top:-3px;width:2px;height:12px;
+                                        background:var(--purple-light);border-radius:1px;
+                                        transition:left 0.2s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="bet-controls">
+
+      <!-- Dirección OVER / UNDER -->
+      <div class="form-group">
+        <label class="form-label">Dirección</label>
+        <div class="direction-toggle">
+          <button id="btnUnder" onclick="setDirection('UNDER')">UNDER</button>
+          <button id="btnOver"  onclick="setDirection('OVER')" class="active">OVER</button>
+        </div>
+      </div>
+
+      <!-- Slider de target -->
+      <div class="form-group">
+        <label class="form-label">
+          Target: <span id="targetVal">50</span>
+          &nbsp;·&nbsp;
+          Ganar si: <span id="winCondition">dado &gt; 50</span>
+        </label>
+        <div class="dice-slider-wrap">
+          <input type="range" class="dice-slider" id="targetSlider"
+                 min="2" max="98" value="50" oninput="updateTarget(this.value)">
+        </div>
+      </div>
+
+      <!-- Stats calculados -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">CHANCE</div>
+          <div style="font-weight:800;color:var(--purple-light);" id="winChance">49%</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">MULTIPLICADOR</div>
+          <div style="font-weight:800;color:var(--gold);" id="multiplier">2.00x</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">GANANCIA</div>
+          <div style="font-weight:800;color:var(--green-neon);" id="potentialWin">0.00 🪙</div>
+        </div>
+      </div>
+
+      <!-- Monto de apuesta -->
+      <div class="form-group">
+        <label class="form-label">Apuesta</label>
+        <div class="input-group">
+          <input class="form-input" type="number" id="betAmount"
+                 min="1" max="10000" value="10" step="1"
+                 oninput="updatePotential()">
+          <span class="input-group__suffix">🪙</span>
+        </div>
+        <div class="multiplier-presets" style="margin-top:8px;">
+          <button onclick="setBet(10)">10</button>
+          <button onclick="setBet(50)">50</button>
+          <button onclick="setBet(100)">100</button>
+          <button onclick="setBet(500)">500</button>
+          <button onclick="setHalfBet()">½</button>
+          <button onclick="setMaxBet()">MAX</button>
+        </div>
+      </div>
+
+      <!-- Botón de jugar -->
+      <button class="btn btn--orange btn--full btn--lg" id="playBtn" onclick="playDice()">
+        🎲 Tirar dado
+      </button>
+
+    </div>
+
+  </div>
+</main>
+
+<script src="../../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let direction = 'OVER';
+  let currentBalance = 0;
+  const HOUSE_EDGE = 0.01; // 1%
+
+  // ─── Carga balance inicial ─────────────────────────────────────────────────
+  async function loadBalance() {
+    try {
+      const data = await VB.wallet.balance();
+      currentBalance = parseFloat(data.wallet.balance);
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+    } catch (e) { /* silent */ }
+  }
+
+  // ─── Actualiza dirección ───────────────────────────────────────────────────
+  function setDirection(dir) {
+    direction = dir;
+    document.getElementById('btnOver').classList.toggle('active', dir === 'OVER');
+    document.getElementById('btnUnder').classList.toggle('active', dir === 'UNDER');
+    updateTarget(document.getElementById('targetSlider').value);
+  }
+
+  // ─── Actualiza target y recalcula stats ───────────────────────────────────
+  function updateTarget(val) {
+    const target = parseInt(val);
+    document.getElementById('targetVal').textContent = target;
+    document.getElementById('targetLabel').textContent = `Target: ${target}`;
+
+    const isOver = direction === 'OVER';
+    const winChance = isOver ? (100 - target) / 100 : target / 100;
+    const multiplier = (1 / winChance) * (1 - HOUSE_EDGE);
+    const chancePercent = (winChance * 100).toFixed(1);
+
+    document.getElementById('winCondition').innerHTML =
+      isOver
+        ? `dado &gt; ${target}`
+        : `dado &lt; ${target}`;
+
+    document.getElementById('winChance').textContent = chancePercent + '%';
+    document.getElementById('multiplier').textContent = multiplier.toFixed(4) + 'x';
+
+    // Zona ganadora en la barra
+    const winZone = document.getElementById('winZone');
+    const marker  = document.getElementById('targetMarker');
+    const pct     = target;
+
+    if (isOver) {
+      winZone.style.left  = pct + '%';
+      winZone.style.width = (100 - pct) + '%';
+      winZone.style.background = 'rgba(0,255,136,0.4)';
+    } else {
+      winZone.style.left  = '0%';
+      winZone.style.width = pct + '%';
+      winZone.style.background = 'rgba(0,255,136,0.4)';
+    }
+    marker.style.left = pct + '%';
+
+    updatePotential();
+  }
+
+  // ─── Actualiza ganancia potencial ─────────────────────────────────────────
+  function updatePotential() {
+    const bet    = parseFloat(document.getElementById('betAmount').value) || 0;
+    const target = parseInt(document.getElementById('targetSlider').value);
+    const isOver = direction === 'OVER';
+    const winChance = isOver ? (100 - target) / 100 : target / 100;
+    const multiplier = (1 / winChance) * (1 - HOUSE_EDGE);
+    const win = bet * multiplier;
+    document.getElementById('potentialWin').textContent =
+      win.toFixed(2) + ' 🪙';
+  }
+
+  // ─── Helpers de apuesta ───────────────────────────────────────────────────
+  function setBet(amount) {
+    document.getElementById('betAmount').value = Math.min(amount, 10000);
+    updatePotential();
+  }
+  function setHalfBet() {
+    const curr = parseFloat(document.getElementById('betAmount').value) || 10;
+    setBet(Math.max(1, Math.floor(curr / 2)));
+  }
+  function setMaxBet() {
+    setBet(Math.min(currentBalance, 10000));
+  }
+
+  // ─── Animación de número rodando ──────────────────────────────────────────
+  function animateRoll(finalNumber) {
+    return new Promise(resolve => {
+      const el = document.getElementById('rollDisplay');
+      el.className = 'roll-number rolling';
+      el.style.color = '';
+      el.style.animation = '';
+
+      let count = 0;
+      const total = 15;
+      const interval = setInterval(() => {
+        el.textContent = Math.floor(Math.random() * 100) + 1;
+        count++;
+        if (count >= total) {
+          clearInterval(interval);
+          el.textContent = finalNumber;
+          el.classList.remove('rolling');
+          resolve();
+        }
+      }, 40);
+    });
+  }
+
+  // ─── Jugar ────────────────────────────────────────────────────────────────
+  async function playDice() {
+    const betAmount = parseFloat(document.getElementById('betAmount').value);
+    const target    = parseInt(document.getElementById('targetSlider').value);
+    const playBtn   = document.getElementById('playBtn');
+    const resultLabel = document.getElementById('resultLabel');
+
+    if (!betAmount || betAmount < 1) {
+      showToast('Apuesta mínima: 1 moneda', 'error'); return;
+    }
+    if (betAmount > currentBalance) {
+      showToast('Saldo insuficiente', 'error'); return;
+    }
+
+    playBtn.disabled = true;
+    playBtn.textContent = 'Tirando...';
+    resultLabel.textContent = '';
+    document.getElementById('rollDisplay').className = 'roll-number';
+
+    try {
+      const data = await VB.games.dice({ betAmount, target, direction });
+
+      // Anima el número
+      await animateRoll(data.roll);
+
+      const el = document.getElementById('rollDisplay');
+      if (data.result === 'WIN') {
+        el.className = 'roll-number win';
+        resultLabel.innerHTML =
+          `<span style="color:var(--green-neon)">✓ GANASTE ${data.payout.toFixed(2)} 🪙</span>`;
+        showToast(`¡Ganaste ${data.payout.toFixed(2)} monedas! 🎉`, 'success');
+      } else {
+        el.className = 'roll-number loss';
+        resultLabel.innerHTML =
+          `<span style="color:var(--red-accent)">✗ PERDISTE ${betAmount.toFixed(2)} 🪙</span>`;
+        showToast('Perdiste esta vez. ¡Intentá de nuevo!', 'error');
+      }
+
+      // Actualiza balance
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      playBtn.disabled = false;
+      playBtn.textContent = '🎲 Tirar dado';
+    }
+  }
+
+  // Inicializa
+  loadBalance();
+  updateTarget(50);
+</script>
+</body>
+</html>

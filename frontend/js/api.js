@@ -85,6 +85,12 @@ const VB = {
     crashStart:    (data)   => api.post('/games/crash/start',   data),
     crashCashout:  (data)   => api.post('/games/crash/cashout', data),
     history:       (page=1) => api.get(`/games/history?page=${page}`),
+    minesStart:    (data)   => api.post('/games/mines/start',   data),
+    minesReveal:   (data)   => api.post('/games/mines/reveal',  data),
+    minesCashout:  (data)   => api.post('/games/mines/cashout', data),
+    plinko:        (data)   => api.post('/games/plinko',        data),
+    roulette:      (data)   => api.post('/games/roulette',      data),
+
   },
 
   // Apuestas deportivas

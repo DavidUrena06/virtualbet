@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Mines</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    /* ── Tablero 5×5 ─────────────────────────────────────────────── */
+    .mines-board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 1.5rem 0;
+    }
+    .mine-cell {
+      aspect-ratio: 1;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      font-size: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    .mine-cell:hover:not(.revealed):not(.disabled) {
+      background: var(--bg-card-hover);
+      border-color: var(--purple);
+      transform: scale(1.05);
+    }
+    .mine-cell.revealed-safe {
+      background: rgba(0,255,136,0.12);
+      border-color: var(--green-neon);
+      cursor: default;
+      animation: cellReveal 0.3s ease;
+    }
+    .mine-cell.revealed-mine {
+      background: rgba(239,68,68,0.2);
+      border-color: var(--red-accent);
+      cursor: default;
+      animation: mineExplode 0.4s ease;
+    }
+    .mine-cell.hint {
+      background: rgba(124,58,237,0.08);
+      border-color: var(--purple);
+    }
+    .mine-cell.disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+    @keyframes cellReveal {
+      0%   { transform: scale(0.8); opacity: 0.5; }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    @keyframes mineExplode {
+      0%   { transform: scale(1); }
+      20%  { transform: scale(1.3) rotate(-5deg); }
+      40%  { transform: scale(0.9) rotate(5deg); }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Multiplicador flotante ───────────────────────────────────── */
+    .mult-display {
+      text-align: center;
+      padding: 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 1rem;
+    }
+    .mult-display .mult-value {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--green-neon);
+      line-height: 1;
+      transition: all 0.2s ease;
+    }
+    .mult-display .mult-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ── Selector de minas ─────────────────────────────────────────── */
+    .mines-selector {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .mines-opt {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .mines-opt:hover { border-color: var(--border-hover); }
+    .mines-opt.selected {
+      background: rgba(124,58,237,0.15);
+      border-color: var(--purple);
+      color: var(--purple-light);
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="../dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">💣 Mines</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
+</nav>
+
+<main class="container page">
+  <div class="game-area">
+
+    <!-- Multiplicador actual -->
+    <div class="mult-display">
+      <div class="mult-value" id="multDisplay">1.00x</div>
+      <div class="mult-label" id="multLabel">Ganancia potencial</div>
+      <div style="font-size:0.9rem;color:var(--text-secondary);margin-top:6px;">
+        Ganás: <strong style="color:var(--green-neon);" id="payoutDisplay">0.00 🪙</strong>
+      </div>
+    </div>
+
+    <!-- Tablero 5×5 -->
+    <div class="mines-board" id="board"></div>
+
+    <!-- Controles -->
+    <div class="bet-controls">
+
+      <!-- Cantidad de minas -->
+      <div class="form-group" id="minesControl">
+        <label class="form-label">Cantidad de minas</label>
+        <div class="mines-selector">
+          <div class="mines-opt selected" onclick="setMines(1)">1</div>
+          <div class="mines-opt" onclick="setMines(3)">3</div>
+          <div class="mines-opt" onclick="setMines(5)">5</div>
+          <div class="mines-opt" onclick="setMines(10)">10</div>
+          <div class="mines-opt" onclick="setMines(20)">20</div>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
+          Multiplicador inicial con 1 celda:
+          <strong style="color:var(--gold);" id="firstMultHint">—</strong>
+        </div>
+      </div>
+
+      <!-- Monto -->
+      <div class="form-group" id="betControl">
+        <label class="form-label">Apuesta</label>
+        <div class="input-group">
+          <input class="form-input" type="number" id="betAmount"
+                 min="1" max="10000" value="10" step="1" oninput="updateHint()">
+          <span class="input-group__suffix">🪙</span>
+        </div>
+        <div class="multiplier-presets" style="margin-top:8px;">
+          <button onclick="setBet(10)">10</button>
+          <button onclick="setBet(50)">50</button>
+          <button onclick="setBet(100)">100</button>
+          <button onclick="setBet(500)">500</button>
+          <button onclick="setHalfBet()">½</button>
+          <button onclick="setMaxBet()">MAX</button>
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div id="actionArea">
+        <button class="btn btn--orange btn--full btn--lg" onclick="startGame()">
+          💣 Jugar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="../../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let gameId     = null;
+  let minesCount = 1;
+  let betAmt     = 10;
+  let revealed   = [];
+  let currentBalance = 0;
+  let playing    = false;
+  const HOUSE_EDGE = 0.03;
+  const TOTAL_CELLS = 25;
+
+  // ── Carga balance ─────────────────────────────────────────────────────────
+  async function loadBalance() {
+    try {
+      const d = await VB.wallet.balance();
+      currentBalance = parseFloat(d.wallet.balance);
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+    } catch(e) {}
+  }
+
+  function setMines(n) {
+    minesCount = n;
+    document.querySelectorAll('.mines-opt').forEach(el => {
+      el.classList.toggle('selected', parseInt(el.textContent) === n);
+    });
+    updateHint();
+  }
+
+  function setBet(n) {
+    document.getElementById('betAmount').value = Math.min(n, 10000);
+    betAmt = n;
+    updateHint();
+  }
+  function setHalfBet() {
+    const c = parseFloat(document.getElementById('betAmount').value) || 10;
+    setBet(Math.max(1, Math.floor(c / 2)));
+  }
+  function setMaxBet() { setBet(Math.min(currentBalance, 10000)); }
+
+  // Calcula multiplicador esperado con X reveals
+  function calcMult(reveals) {
+    let m = 1;
+    const safe = TOTAL_CELLS - minesCount;
+    for (let i = 0; i < reveals; i++) {
+      m *= (TOTAL_CELLS - i) / (safe - i);
+    }
+    return m * (1 - HOUSE_EDGE);
+  }
+
+  function updateHint() {
+    betAmt = parseFloat(document.getElementById('betAmount').value) || 10;
+    const m = calcMult(1);
+    document.getElementById('firstMultHint').textContent = m.toFixed(4) + 'x';
+    if (!playing) {
+      document.getElementById('multDisplay').textContent = '—';
+      document.getElementById('payoutDisplay').textContent = '0.00 🪙';
+    }
+  }
+
+  // ── Crea el tablero inicial ───────────────────────────────────────────────
+  function buildBoard(disabled = false) {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'mine-cell' + (disabled ? ' disabled' : '');
+      cell.dataset.index = i;
+      cell.textContent = '💎';
+      if (!disabled) cell.onclick = () => clickCell(i);
+      board.appendChild(cell);
+    }
+  }
+
+  // ── Inicia el juego ───────────────────────────────────────────────────────
+  async function startGame() {
+    betAmt = parseFloat(document.getElementById('betAmount').value);
+
+    if (!betAmt || betAmt < 1) { showToast('Apuesta mínima: 1 moneda', 'error'); return; }
+    if (betAmt > currentBalance)  { showToast('Saldo insuficiente', 'error'); return; }
+
+    try {
+      const data = await VB.games.minesStart({ betAmount: betAmt, minesCount });
+      gameId   = data.gameId;
+      revealed = [];
+      playing  = true;
+
+      buildBoard(false);
+      updateHint();
+
+      // Desactiva controles de configuración
+      document.getElementById('minesControl').style.opacity = '0.4';
+      document.getElementById('minesControl').style.pointerEvents = 'none';
+      document.getElementById('betControl').style.opacity = '0.4';
+      document.getElementById('betControl').style.pointerEvents = 'none';
+
+      // Muestra botón de cashout
+      document.getElementById('actionArea').innerHTML = `
+        <button class="btn btn--green btn--full btn--lg" onclick="cashout()" id="cashoutBtn" disabled>
+          💸 Cobrar (destapá al menos 1)
+        </button>
+      `;
+
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+      document.getElementById('multLabel').textContent = 'Destapá celdas para ganar';
+
+    } catch(err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Clic en una celda ─────────────────────────────────────────────────────
+  async function clickCell(index) {
+    if (!playing || !gameId) return;
+    if (revealed.includes(index)) return;
+
+    const cell = document.querySelector(`[data-index="${index}"]`);
+    cell.style.pointerEvents = 'none';
+
+    try {
+      const data = await VB.games.minesReveal({ gameId, cellIndex: index });
+
+      if (data.result === 'MINE') {
+        // Explotó
+        cell.className = 'mine-cell revealed-mine';
+        cell.textContent = '💣';
+
+        // Muestra todas las minas
+        data.mines.forEach(mi => {
+          const mc = document.querySelector(`[data-index="${mi}"]`);
+          if (mc) {
+            mc.className = 'mine-cell revealed-mine disabled';
+            mc.textContent = '💣';
+            mc.style.pointerEvents = 'none';
+          }
+        });
+
+        // Las celdas seguras reveladas quedan como están
+        data.revealed.forEach(ri => {
+          const rc = document.querySelector(`[data-index="${ri}"]`);
+          if (rc) rc.className = 'mine-cell revealed-safe disabled';
+        });
+
+        document.getElementById('multDisplay').textContent = 'BOOM!';
+        document.getElementById('multDisplay').style.color = 'var(--red-accent)';
+        document.getElementById('multLabel').textContent =
+          `Perdiste ${betAmt.toFixed(2)} 🪙`;
+        document.getElementById('payoutDisplay').textContent = '0.00 🪙';
+
+        showToast(`💣 ¡Mina! Perdiste ${betAmt.toFixed(2)} monedas`, 'error');
+        endGame(false);
+
+      } else {
+        // Celda segura
+        cell.className = 'mine-cell revealed-safe disabled';
+        cell.textContent = '💎';
+        revealed = data.revealed;
+
+        const mult   = data.multiplier;
+        const payout = data.currentPayout;
+
+        document.getElementById('multDisplay').textContent = mult.toFixed(4) + 'x';
+        document.getElementById('multDisplay').style.color = 'var(--green-neon)';
+        document.getElementById('multLabel').textContent =
+          `${revealed.length} celda${revealed.length > 1 ? 's' : ''} destapada${revealed.length > 1 ? 's' : ''}`;
+        document.getElementById('payoutDisplay').textContent = payout.toFixed(2) + ' 🪙';
+
+        // Habilita cashout
+        const btn = document.getElementById('cashoutBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = `💸 Cobrar ${payout.toFixed(2)} 🪙`;
+        }
+      }
+    } catch(err) {
+      showToast(err.message, 'error');
+      cell.style.pointerEvents = 'auto';
+    }
+  }
+
+  // ── Cashout ───────────────────────────────────────────────────────────────
+  async function cashout() {
+    if (!gameId || !playing) return;
+    try {
+      const data = await VB.games.minesCashout({ gameId });
+
+      // Revela dónde estaban las minas
+      data.mines.forEach(mi => {
+        const mc = document.querySelector(`[data-index="${mi}"]`);
+        if (mc && !mc.classList.contains('revealed-safe')) {
+          mc.className = 'mine-cell hint disabled';
+          mc.textContent = '💣';
+          mc.style.opacity = '0.5';
+          mc.style.pointerEvents = 'none';
+        }
+      });
+
+      document.getElementById('multDisplay').textContent =
+        data.multiplier.toFixed(4) + 'x';
+      document.getElementById('payoutDisplay').textContent =
+        data.payout.toFixed(2) + ' 🪙';
+
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+      showToast(`¡Cobrado! +${data.payout.toFixed(2)} 🪙 🎉`, 'success');
+      endGame(true);
+
+    } catch(err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Resetea UI después del juego ─────────────────────────────────────────
+  function endGame(won) {
+    playing = false;
+    gameId  = null;
+    revealed = [];
+
+    // Deshabilita todas las celdas
+    document.querySelectorAll('.mine-cell').forEach(c => {
+      c.style.pointerEvents = 'none';
+    });
+
+    setTimeout(() => {
+      buildBoard(false);
+      document.getElementById('minesControl').style.opacity = '1';
+      document.getElementById('minesControl').style.pointerEvents = 'auto';
+      document.getElementById('betControl').style.opacity = '1';
+      document.getElementById('betControl').style.pointerEvents = 'auto';
+      document.getElementById('multDisplay').textContent = '—';
+      document.getElementById('multDisplay').style.color = 'var(--green-neon)';
+      document.getElementById('multLabel').textContent = 'Ganancia potencial';
+      document.getElementById('payoutDisplay').textContent = '0.00 🪙';
+      document.getElementById('actionArea').innerHTML = `
+        <button class="btn btn--orange btn--full btn--lg" onclick="startGame()">
+          💣 Jugar
+        </button>
+      `;
+      updateHint();
+    }, 2500);
+  }
+
+  // Agrega métodos al objeto VB para los nuevos endpoints
+  VB.games.minesStart   = (data) => api.post('/games/mines/start',   data);
+  VB.games.minesReveal  = (data) => api.post('/games/mines/reveal',  data);
+  VB.games.minesCashout = (data) => api.post('/games/mines/cashout', data);
+
+  loadBalance();
+  buildBoard(false);
+  updateHint();
+</script>
+</body>
+</html>

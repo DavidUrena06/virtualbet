@@ -1,281 +1,212 @@
-// games/games.controller.js
-// Motor de juegos - toda la lógica crítica en backend
-// Nunca confiar en valores del frontend para calcular resultados
+// games/games.controller.js  — SECCIÓN NUEVOS JUEGOS
+// Agregar estas funciones al archivo existente games.controller.js
 
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { transferCoins } = require('../wallet/wallet.controller');
 const prisma = new PrismaClient();
-
-// ─── RNG seguro (no manipulable desde frontend) ───────────────────────────────
-const crypto = require('crypto');
-
-const secureRandom = () => {
-  // Genera número aleatorio entre 0 y 1 usando crypto (más seguro que Math.random)
-  const buffer = crypto.randomBytes(4);
-  return buffer.readUInt32BE(0) / 0xFFFFFFFF;
-};
-
 const HOUSE_EDGE = parseFloat(process.env.HOUSE_EDGE) || 0.03;
 
-// ─── Validación de apuesta ────────────────────────────────────────────────────
-const validateBet = async (userId, betAmount) => {
-  if (!betAmount || betAmount <= 0) {
-    throw new Error('Monto de apuesta inválido');
-  }
+function secureRandom() {
+  return crypto.randomBytes(4).readUInt32BE(0) / 0xFFFFFFFF;
+}
 
-  if (betAmount < 1) {
-    throw new Error('Apuesta mínima: 1 moneda');
-  }
+// ════════════════════════════════════════════════════════════════════
+// JUEGO: MINES
+// El jugador elige cuántas minas (1-24) en un tablero 5x5 (25 celdas).
+// Cada vez que destapa una celda segura, el multiplicador sube.
+// Si destapa una mina, pierde todo.
+// ════════════════════════════════════════════════════════════════════
 
-  if (betAmount > 10000) {
-    throw new Error('Apuesta máxima: 10,000 monedas');
-  }
-
-  const wallet = await prisma.wallet.findUnique({ where: { userId } });
-
-  if (!wallet || parseFloat(wallet.balance) < betAmount) {
-    throw new Error('Saldo insuficiente');
-  }
-
-  return wallet;
-};
-
-// ─── JUEGO: DICE ──────────────────────────────────────────────────────────────
-// El jugador elige un número target y si ganará OVER o UNDER ese número
-// El dado lanza 0-100. House edge = 3%
-const playDice = async (req, res) => {
-  try {
-    const userId   = req.user.id;
-    const { betAmount, target, direction } = req.body;
-
-    // Validaciones
-    if (!target || target < 2 || target > 98) {
-      return res.status(400).json({ error: 'Target debe estar entre 2 y 98' });
-    }
-
-    if (!['OVER', 'UNDER'].includes(direction)) {
-      return res.status(400).json({ error: 'Dirección inválida. Usá OVER o UNDER' });
-    }
-
-    const parsedBet = parseFloat(betAmount);
-    await validateBet(userId, parsedBet);
-
-    // Calcula multiplicador con house edge
-    const winChance = direction === 'OVER'
-      ? (100 - target) / 100
-      : target / 100;
-
-    // Multiplicador = (1 / winChance) * (1 - houseEdge)
-    const multiplier = (1 / winChance) * (1 - HOUSE_EDGE);
-
-    // Lanza el dado
-    const roll = Math.floor(secureRandom() * 100) + 1; // 1-100
-
-    const won = direction === 'OVER' ? roll > target : roll < target;
-    const payout = won ? parsedBet * multiplier : 0;
-    const netChange = won ? payout - parsedBet : -parsedBet;
-
-    // Registra en BD con transacción atómica
-    await prisma.$transaction(async (tx) => {
-      // Cobra la apuesta
-      await transferCoins(tx, userId, -parsedBet, 'GAME_BET',
-        `Dice: apuesta ${direction} ${target}`, null);
-
-      // Si ganó, paga
-      if (won) {
-        await transferCoins(tx, userId, payout, 'GAME_WIN',
-          `Dice: ganaste x${multiplier.toFixed(4)}`, null);
-      }
-
-      // Historial
-      await tx.gameHistory.create({
-        data: {
-          userId,
-          gameType: 'DICE',
-          betAmount: parsedBet,
-          multiplier: won ? multiplier : 0,
-          payout,
-          result: won ? 'WIN' : 'LOSS',
-          gameData: { roll, target, direction, multiplier },
-        },
-      });
-    });
-
-    // Obtiene balance actualizado
-    const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
-
-    res.json({
-      result: won ? 'WIN' : 'LOSS',
-      roll,
-      target,
-      direction,
-      multiplier: parseFloat(multiplier.toFixed(4)),
-      betAmount: parsedBet,
-      payout: parseFloat(payout.toFixed(2)),
-      newBalance: parseFloat(updatedWallet.balance),
-    });
-  } catch (error) {
-    console.error('[DICE] Error:', error.message);
-    res.status(400).json({ error: error.message });
-  }
-};
-
-// ─── JUEGO: COINFLIP ──────────────────────────────────────────────────────────
-// El jugador elige HEADS o TAILS. Paga 1.96x (house edge 2%)
-const playCoinflip = async (req, res) => {
+// Inicia una partida de Mines: genera el tablero secreto en backend
+const startMines = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { betAmount, choice } = req.body;
+    const { betAmount, minesCount } = req.body;
 
-    if (!['HEADS', 'TAILS'].includes(choice)) {
-      return res.status(400).json({ error: 'Elegí HEADS o TAILS' });
+    const parsedBet   = parseFloat(betAmount);
+    const parsedMines = parseInt(minesCount);
+
+    if (parsedMines < 1 || parsedMines > 24) {
+      return res.status(400).json({ error: 'Minas: entre 1 y 24' });
     }
 
-    const parsedBet = parseFloat(betAmount);
-    await validateBet(userId, parsedBet);
+    // Valida saldo
+    const wallet = await prisma.wallet.findUnique({ where: { userId } });
+    if (!wallet || parseFloat(wallet.balance) < parsedBet) {
+      return res.status(400).json({ error: 'Saldo insuficiente' });
+    }
+    if (parsedBet < 1 || parsedBet > 10000) {
+      return res.status(400).json({ error: 'Apuesta: 1-10,000' });
+    }
 
-    const result = secureRandom() < 0.5 ? 'HEADS' : 'TAILS';
-    const won = result === choice;
-    const multiplier = 1.96; // house edge 2%
-    const payout = won ? parsedBet * multiplier : 0;
+    // Genera posiciones de minas aleatoriamente (0-24)
+    const allCells = Array.from({ length: 25 }, (_, i) => i);
+    const mines = new Set();
+    while (mines.size < parsedMines) {
+      mines.add(Math.floor(secureRandom() * 25));
+    }
 
-    await prisma.$transaction(async (tx) => {
-      await transferCoins(tx, userId, -parsedBet, 'GAME_BET',
-        `Coinflip: apostaste ${choice}`, null);
+    const gameId = crypto.randomBytes(8).toString('hex');
 
-      if (won) {
-        await transferCoins(tx, userId, payout, 'GAME_WIN',
-          `Coinflip: ganaste x${multiplier}`, null);
-      }
-
-      await tx.gameHistory.create({
-        data: {
-          userId,
-          gameType: 'COINFLIP',
-          betAmount: parsedBet,
-          multiplier: won ? multiplier : 0,
-          payout,
-          result: won ? 'WIN' : 'LOSS',
-          gameData: { choice, result, multiplier },
-        },
-      });
-    });
-
-    const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
-
-    res.json({
-      result: won ? 'WIN' : 'LOSS',
-      yourChoice: choice,
-      coinResult: result,
-      multiplier,
-      betAmount: parsedBet,
-      payout: parseFloat(payout.toFixed(2)),
-      newBalance: parseFloat(updatedWallet.balance),
-    });
-  } catch (error) {
-    console.error('[COINFLIP] Error:', error.message);
-    res.status(400).json({ error: error.message });
-  }
-};
-
-// ─── JUEGO: CRASH ─────────────────────────────────────────────────────────────
-// El multiplicador sube hasta que "crashea". El jugador debe hacer cash-out antes.
-// La semilla del crash se genera en backend y no se revela hasta que el juego termina.
-const startCrash = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { betAmount } = req.body;
-
-    const parsedBet = parseFloat(betAmount);
-    await validateBet(userId, parsedBet);
-
-    // Genera el punto de crash (house edge 3%)
-    // Fórmula: crash = 0.99 / random  — garantiza house edge del ~3%
-    const random = secureRandom();
-    const crashPoint = random < 0.01
-      ? 1.00 // 1% de chance de crashear inmediatamente en 1x
-      : Math.max(1.00, (0.99 / random));
-
-    // Genera ID único para esta ronda
-    const roundId = require('crypto').randomBytes(8).toString('hex');
-
-    // Guarda el crash en memoria temporal (en producción usar Redis)
-    // Por ahora lo guardamos en un Map en memoria
-    if (!global.crashRounds) global.crashRounds = new Map();
-    global.crashRounds.set(roundId, {
-      crashPoint: parseFloat(crashPoint.toFixed(2)),
-      betAmount: parsedBet,
+    // Guarda el estado en memoria (en producción → Redis)
+    if (!global.minesGames) global.minesGames = new Map();
+    global.minesGames.set(gameId, {
       userId,
+      betAmount: parsedBet,
+      minesCount: parsedMines,
+      mines: [...mines],
+      revealed: [],       // celdas reveladas
+      status: 'playing',
       startedAt: Date.now(),
     });
 
-    // Cobra la apuesta inmediatamente
+    // Cobra la apuesta
     await prisma.$transaction(async (tx) => {
       await transferCoins(tx, userId, -parsedBet, 'GAME_BET',
-        `Crash: apuesta ronda ${roundId}`, roundId);
+        `Mines: inicio partida ${gameId}`, gameId);
     });
 
     const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
 
-    // Solo devuelve el roundId, NO el crashPoint (el frontend no lo sabe)
     res.json({
-      roundId,
-      betAmount: parsedBet,
+      gameId,
+      minesCount: parsedMines,
+      totalCells: 25,
       newBalance: parseFloat(updatedWallet.balance),
-      message: 'Ronda iniciada. Hacé cashout antes del crash.',
+      message: 'Partida iniciada. Destapá celdas para ganar.',
     });
-  } catch (error) {
-    console.error('[CRASH] Error al iniciar:', error.message);
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    console.error('[MINES] startMines:', err.message);
+    res.status(400).json({ error: err.message });
   }
 };
 
-// Cash-out del Crash: el jugador decide en qué multiplicador retirarse
-const cashoutCrash = async (req, res) => {
+// Calcula el multiplicador de Mines según celdas reveladas
+function minesMultiplier(totalCells, minesCount, revealed) {
+  // Fórmula: producto de (celdas_seguras / celdas_restantes) por cada reveal
+  // ajustado por house edge
+  let mult = 1;
+  const safe = totalCells - minesCount;
+  for (let i = 0; i < revealed; i++) {
+    const remaining = totalCells - i;
+    const safeRemaining = safe - i;
+    mult *= remaining / safeRemaining;
+  }
+  return mult * (1 - HOUSE_EDGE);
+}
+
+// Revela una celda
+const revealCell = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { roundId, cashoutAt } = req.body;
+    const { gameId, cellIndex } = req.body;
 
-    if (!global.crashRounds?.has(roundId)) {
-      return res.status(400).json({ error: 'Ronda no encontrada o ya terminada' });
+    if (cellIndex < 0 || cellIndex > 24) {
+      return res.status(400).json({ error: 'Celda inválida' });
     }
 
-    const round = global.crashRounds.get(roundId);
-
-    if (round.userId !== userId) {
-      return res.status(403).json({ error: 'Esta ronda no te pertenece' });
+    const game = global.minesGames?.get(gameId);
+    if (!game) return res.status(400).json({ error: 'Partida no encontrada' });
+    if (game.userId !== userId) return res.status(403).json({ error: 'No es tu partida' });
+    if (game.status !== 'playing') return res.status(400).json({ error: 'Partida terminada' });
+    if (game.revealed.includes(cellIndex)) {
+      return res.status(400).json({ error: 'Celda ya revelada' });
     }
 
-    const parsedCashout = parseFloat(cashoutAt);
+    const isMine = game.mines.includes(cellIndex);
 
-    if (parsedCashout < 1.01) {
-      return res.status(400).json({ error: 'Cashout mínimo: 1.01x' });
+    if (isMine) {
+      // PERDIÓ — termina la partida
+      game.status = 'lost';
+      global.minesGames.set(gameId, game);
+
+      await prisma.gameHistory.create({
+        data: {
+          userId,
+          gameType: 'MINES',
+          betAmount: game.betAmount,
+          multiplier: 0,
+          payout: 0,
+          result: 'LOSS',
+          gameData: {
+            minesCount: game.minesCount,
+            mines: game.mines,
+            revealed: game.revealed,
+            hitCell: cellIndex,
+          },
+        },
+      });
+
+      global.minesGames.delete(gameId);
+
+      return res.json({
+        result: 'MINE',
+        cellIndex,
+        mines: game.mines,   // Revela todas las minas al perder
+        revealed: game.revealed,
+        gameOver: true,
+        message: '💣 ¡Encontraste una mina!',
+      });
     }
 
-    // Verifica si el jugador hizo cashout antes del crash
-    const won = parsedCashout <= round.crashPoint;
-    const payout = won ? round.betAmount * parsedCashout : 0;
+    // CELDA SEGURA — suma al reveal
+    game.revealed.push(cellIndex);
+    global.minesGames.set(gameId, game);
 
-    global.crashRounds.delete(roundId);
+    const mult = minesMultiplier(25, game.minesCount, game.revealed.length);
+    const currentPayout = game.betAmount * mult;
+
+    res.json({
+      result: 'SAFE',
+      cellIndex,
+      revealed: game.revealed,
+      multiplier: parseFloat(mult.toFixed(4)),
+      currentPayout: parseFloat(currentPayout.toFixed(2)),
+      gameOver: false,
+    });
+  } catch (err) {
+    console.error('[MINES] revealCell:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Cashout de Mines — el jugador decide cobrar antes de seguir
+const cashoutMines = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { gameId } = req.body;
+
+    const game = global.minesGames?.get(gameId);
+    if (!game) return res.status(400).json({ error: 'Partida no encontrada' });
+    if (game.userId !== userId) return res.status(403).json({ error: 'No es tu partida' });
+    if (game.status !== 'playing') return res.status(400).json({ error: 'Partida ya terminada' });
+    if (game.revealed.length === 0) {
+      return res.status(400).json({ error: 'Destapá al menos una celda antes de cobrar' });
+    }
+
+    const mult    = minesMultiplier(25, game.minesCount, game.revealed.length);
+    const payout  = game.betAmount * mult;
+
+    game.status = 'won';
+    global.minesGames.delete(gameId);
 
     await prisma.$transaction(async (tx) => {
-      if (won) {
-        await transferCoins(tx, userId, payout, 'GAME_WIN',
-          `Crash: cashout en ${parsedCashout}x`, roundId);
-      }
+      await transferCoins(tx, userId, payout, 'GAME_WIN',
+        `Mines: cashout x${mult.toFixed(4)}`, gameId);
 
       await tx.gameHistory.create({
         data: {
           userId,
-          gameType: 'CRASH',
-          betAmount: round.betAmount,
-          multiplier: won ? parsedCashout : 0,
+          gameType: 'MINES',
+          betAmount: game.betAmount,
+          multiplier: mult,
           payout,
-          result: won ? 'WIN' : 'LOSS',
+          result: 'WIN',
           gameData: {
-            cashoutAt: parsedCashout,
-            crashPoint: round.crashPoint,
-            won,
+            minesCount: game.minesCount,
+            revealed: game.revealed,
+            mines: game.mines,
           },
         },
       });
@@ -284,54 +215,233 @@ const cashoutCrash = async (req, res) => {
     const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
 
     res.json({
-      result: won ? 'WIN' : 'LOSS',
-      cashoutAt: parsedCashout,
-      crashPoint: round.crashPoint,
-      betAmount: round.betAmount,
+      result: 'WIN',
+      multiplier: parseFloat(mult.toFixed(4)),
       payout: parseFloat(payout.toFixed(2)),
+      mines: game.mines,
       newBalance: parseFloat(updatedWallet.balance),
     });
-  } catch (error) {
-    console.error('[CRASH] Error en cashout:', error.message);
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    console.error('[MINES] cashoutMines:', err.message);
+    res.status(400).json({ error: err.message });
   }
 };
 
-// ─── Historial de juegos del usuario ─────────────────────────────────────────
-const getGameHistory = async (req, res) => {
+// ════════════════════════════════════════════════════════════════════
+// JUEGO: PLINKO
+// Una bola cae por un tablero de 16 filas con pegs.
+// El multiplicador depende del bucket donde cae (distribución normal).
+// ════════════════════════════════════════════════════════════════════
+
+// Tabla de multiplicadores por riesgo y posición del bucket
+const PLINKO_MULTIPLIERS = {
+  low: [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6],
+  mid: [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
+  high: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
+};
+
+const playPlinko = async (req, res) => {
   try {
-    const page  = parseInt(req.query.page)  || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip  = (page - 1) * limit;
-    const gameType = req.query.gameType; // filtro opcional
+    const userId = req.user.id;
+    const { betAmount, risk } = req.body;
 
-    const where = { userId: req.user.id };
-    if (gameType) where.gameType = gameType.toUpperCase();
+    if (!['low', 'mid', 'high'].includes(risk)) {
+      return res.status(400).json({ error: 'Riesgo inválido: low, mid o high' });
+    }
 
-    const [history, total] = await Promise.all([
-      prisma.gameHistory.findMany({
-        where,
-        orderBy: { playedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.gameHistory.count({ where }),
-    ]);
+    const parsedBet = parseFloat(betAmount);
+    const wallet    = await prisma.wallet.findUnique({ where: { userId } });
+
+    if (!wallet || parseFloat(wallet.balance) < parsedBet) {
+      return res.status(400).json({ error: 'Saldo insuficiente' });
+    }
+    if (parsedBet < 1 || parsedBet > 10000) {
+      return res.status(400).json({ error: 'Apuesta: 1-10,000' });
+    }
+
+    // Simula la trayectoria de la bola por 16 filas
+    // En cada peg, la bola cae izquierda (0) o derecha (1)
+    const rows = 16;
+    const path = [];
+    let position = 0; // empieza en el centro
+
+    for (let row = 0; row < rows; row++) {
+      const goRight = secureRandom() < 0.5 ? 1 : 0;
+      path.push(goRight);
+      position += goRight;
+    }
+
+    // position va de 0 a 16 → mapear a 9 buckets
+    const buckets = PLINKO_MULTIPLIERS[risk].length;
+    const bucketIndex = Math.min(Math.floor(position / rows * buckets), buckets - 1);
+    const multiplier  = PLINKO_MULTIPLIERS[risk][bucketIndex] * (1 - HOUSE_EDGE);
+    const payout      = parsedBet * multiplier;
+    const won         = payout > parsedBet;
+
+    await prisma.$transaction(async (tx) => {
+      await transferCoins(tx, userId, -parsedBet, 'GAME_BET',
+        `Plinko ${risk}: apuesta`, null);
+
+      if (payout > 0) {
+        await transferCoins(tx, userId, payout, 'GAME_WIN',
+          `Plinko ${risk}: x${multiplier.toFixed(4)}`, null);
+      }
+
+      await tx.gameHistory.create({
+        data: {
+          userId,
+          gameType: 'PLINKO',
+          betAmount: parsedBet,
+          multiplier,
+          payout,
+          result: won ? 'WIN' : 'LOSS',
+          gameData: { risk, path, bucketIndex, multiplier },
+        },
+      });
+    });
+
+    const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
 
     res.json({
-      history,
-      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      path,           // trayectoria para animar en el frontend
+      bucketIndex,
+      multiplier: parseFloat(multiplier.toFixed(4)),
+      payout: parseFloat(payout.toFixed(2)),
+      result: won ? 'WIN' : 'LOSS',
+      newBalance: parseFloat(updatedWallet.balance),
     });
-  } catch (error) {
-    console.error('[GAMES] Error en historial:', error.message);
-    res.status(500).json({ error: 'Error al obtener historial' });
+  } catch (err) {
+    console.error('[PLINKO] error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// JUEGO: RULETA EUROPEA
+// 37 números (0-36). El jugador apuesta a número exacto, color o docena.
+// House edge 2.7% (un cero verde)
+// ════════════════════════════════════════════════════════════════════
+
+// Colores de la ruleta europea
+const ROULETTE_REDS   = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+const ROULETTE_BLACKS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
+
+function getRouletteColor(num) {
+  if (num === 0) return 'green';
+  if (ROULETTE_REDS.includes(num)) return 'red';
+  return 'black';
+}
+
+// Payouts por tipo de apuesta
+function calculateRoulettePayout(betType, betValue, result) {
+  const num   = result.number;
+  const color = result.color;
+
+  switch (betType) {
+    case 'number':   // Número exacto → paga 35:1
+      return parseInt(betValue) === num ? 36 : 0;
+
+    case 'color':    // Rojo/Negro → paga 1:1
+      if (betValue === 'red'   && color === 'red')   return 2;
+      if (betValue === 'black' && color === 'black') return 2;
+      return 0;
+
+    case 'parity':   // Par/Impar → paga 1:1 (el 0 pierde)
+      if (num === 0) return 0;
+      if (betValue === 'even' && num % 2 === 0) return 2;
+      if (betValue === 'odd'  && num % 2 !== 0) return 2;
+      return 0;
+
+    case 'dozen':    // Docena → paga 2:1
+      const d = parseInt(betValue); // 1, 2 o 3
+      if (d === 1 && num >= 1  && num <= 12) return 3;
+      if (d === 2 && num >= 13 && num <= 24) return 3;
+      if (d === 3 && num >= 25 && num <= 36) return 3;
+      return 0;
+
+    case 'half':     // Mitad → paga 1:1 (1-18 o 19-36)
+      if (num === 0) return 0;
+      if (betValue === 'low'  && num >= 1  && num <= 18) return 2;
+      if (betValue === 'high' && num >= 19 && num <= 36) return 2;
+      return 0;
+
+    default:
+      return 0;
+  }
+}
+
+const playRoulette = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { betAmount, betType, betValue } = req.body;
+
+    const validTypes = ['number', 'color', 'parity', 'dozen', 'half'];
+    if (!validTypes.includes(betType)) {
+      return res.status(400).json({ error: 'Tipo de apuesta inválido' });
+    }
+
+    const parsedBet = parseFloat(betAmount);
+    const wallet    = await prisma.wallet.findUnique({ where: { userId } });
+
+    if (!wallet || parseFloat(wallet.balance) < parsedBet) {
+      return res.status(400).json({ error: 'Saldo insuficiente' });
+    }
+    if (parsedBet < 1 || parsedBet > 10000) {
+      return res.status(400).json({ error: 'Apuesta: 1-10,000' });
+    }
+
+    // Gira la ruleta
+    const number = Math.floor(secureRandom() * 37); // 0-36
+    const color  = getRouletteColor(number);
+    const result = { number, color };
+
+    // Calcula payout (multiplicador sobre la apuesta)
+    const payoutMult = calculateRoulettePayout(betType, betValue, result);
+    const payout     = parsedBet * payoutMult * (1 - HOUSE_EDGE);
+    const won        = payoutMult > 0;
+
+    await prisma.$transaction(async (tx) => {
+      await transferCoins(tx, userId, -parsedBet, 'GAME_BET',
+        `Ruleta: apuesta ${betType}=${betValue}`, null);
+
+      if (won && payout > 0) {
+        await transferCoins(tx, userId, payout, 'GAME_WIN',
+          `Ruleta: ganó ${number} (${color})`, null);
+      }
+
+      await tx.gameHistory.create({
+        data: {
+          userId,
+          gameType: 'ROULETTE',
+          betAmount: parsedBet,
+          multiplier: payoutMult > 0 ? payoutMult * (1 - HOUSE_EDGE) : 0,
+          payout: won ? payout : 0,
+          result: won ? 'WIN' : 'LOSS',
+          gameData: { betType, betValue, number, color, payoutMult },
+        },
+      });
+    });
+
+    const updatedWallet = await prisma.wallet.findUnique({ where: { userId } });
+
+    res.json({
+      result: won ? 'WIN' : 'LOSS',
+      number,
+      color,
+      betType,
+      betValue,
+      payoutMultiplier: payoutMult,
+      payout: won ? parseFloat(payout.toFixed(2)) : 0,
+      newBalance: parseFloat(updatedWallet.balance),
+    });
+  } catch (err) {
+    console.error('[ROULETTE] error:', err.message);
+    res.status(400).json({ error: err.message });
   }
 };
 
 module.exports = {
-  playDice,
-  playCoinflip,
-  startCrash,
-  cashoutCrash,
-  getGameHistory,
+  startMines, revealCell, cashoutMines,
+  playPlinko,
+  playRoulette,
 };
