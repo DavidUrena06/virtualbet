@@ -21,6 +21,7 @@ app.use(helmet());
 // ─── CORS ────────────────────────────────────────────────────────────────────
 // Solo permite requests desde el frontend autorizado
 console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5500',
