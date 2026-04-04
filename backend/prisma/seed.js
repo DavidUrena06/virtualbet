@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 async function main() {
   const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@virtualbet.com';
   const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin1234!';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
 
   // Verifica si ya existe
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
