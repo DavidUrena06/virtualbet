@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Coinflip</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    /* ── Moneda 3D ─────────────────────────────────────────────────── */
+    .coin-scene {
+      perspective: 600px;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 2rem;
+    }
+    .coin {
+      width: 160px;
+      height: 160px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease;
+    }
+    .coin.flipping {
+      animation: coinFlip 1.2s ease-out forwards;
+    }
+    @keyframes coinFlip {
+      0%   { transform: rotateY(0deg) rotateX(0deg); }
+      20%  { transform: rotateY(720deg) rotateX(15deg); }
+      50%  { transform: rotateY(1440deg) rotateX(-10deg); }
+      80%  { transform: rotateY(2160deg) rotateX(5deg); }
+      100% { transform: rotateY(var(--final-rot, 2160deg)) rotateX(0deg); }
+    }
+    .coin__face {
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      backface-visibility: hidden;
+      border: 4px solid rgba(255,255,255,0.1);
+    }
+    .coin__face--heads {
+      background: radial-gradient(circle at 35% 35%, #f9d94a, #c8960c);
+      color: #7a5c00;
+    }
+    .coin__face--tails {
+      background: radial-gradient(circle at 35% 35%, #c0c0c0, #707070);
+      color: #404040;
+      transform: rotateY(180deg);
+    }
+
+    /* ── Selector HEADS / TAILS ────────────────────────────────────── */
+    .choice-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+    .choice-card {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .choice-card:hover {
+      border-color: var(--border-hover);
+    }
+    .choice-card.selected {
+      border-color: var(--purple);
+      background: rgba(124,58,237,0.1);
+      box-shadow: 0 0 20px rgba(124,58,237,0.2);
+    }
+    .choice-card .choice-emoji {
+      font-size: 2.5rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .choice-card .choice-label {
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 1px;
+    }
+    .choice-card .choice-odd {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Resultado ─────────────────────────────────────────────────── */
+    .result-banner {
+      padding: 1.25rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .result-banner.win  {
+      background: rgba(0,255,136,0.07);
+      border-color: var(--green-neon);
+      color: var(--green-neon);
+    }
+    .result-banner.loss {
+      background: rgba(239,68,68,0.07);
+      border-color: var(--red-accent);
+      color: var(--red-accent);
+    }
+
+    @keyframes resultAppear {
+      from { opacity:0; transform:scale(0.9); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    .result-banner.win, .result-banner.loss {
+      animation: resultAppear 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="../dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">🪙 Coinflip</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
+</nav>
+
+<main class="container page">
+  <div class="game-area">
+
+    <!-- Moneda animada -->
+    <div class="dice-display" style="margin-bottom:1.5rem;">
+      <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;
+                  letter-spacing:2px;margin-bottom:1.5rem;">Coinflip</div>
+
+      <div class="coin-scene">
+        <div class="coin" id="coin">
+          <div class="coin__face coin__face--heads">🌟</div>
+          <div class="coin__face coin__face--tails">🌙</div>
+        </div>
+      </div>
+
+      <div class="result-banner" id="resultBanner">
+        Elegí un lado y apostá
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="bet-controls">
+
+      <!-- Selector de lado -->
+      <div class="form-group">
+        <label class="form-label">Tu elección</label>
+        <div class="choice-selector">
+          <div class="choice-card selected" id="cardHeads" onclick="setChoice('HEADS')">
+            <span class="choice-emoji">🌟</span>
+            <div class="choice-label">HEADS</div>
+            <div class="choice-odd">Pagá 1.96x</div>
+          </div>
+          <div class="choice-card" id="cardTails" onclick="setChoice('TAILS')">
+            <span class="choice-emoji">🌙</span>
+            <div class="choice-label">TAILS</div>
+            <div class="choice-odd">Pagá 1.96x</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">CHANCE</div>
+          <div style="font-weight:800;color:var(--purple-light);">50%</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">MULTIPLICADOR</div>
+          <div style="font-weight:800;color:var(--gold);">1.96x</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
+                    padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">GANANCIA</div>
+          <div style="font-weight:800;color:var(--green-neon);" id="potentialWin">0.00 🪙</div>
+        </div>
+      </div>
+
+      <!-- Monto de apuesta -->
+      <div class="form-group">
+        <label class="form-label">Apuesta</label>
+        <div class="input-group">
+          <input class="form-input" type="number" id="betAmount"
+                 min="1" max="10000" value="10" step="1"
+                 oninput="updatePotential()">
+          <span class="input-group__suffix">🪙</span>
+        </div>
+        <div class="multiplier-presets" style="margin-top:8px;">
+          <button onclick="setBet(10)">10</button>
+          <button onclick="setBet(50)">50</button>
+          <button onclick="setBet(100)">100</button>
+          <button onclick="setBet(500)">500</button>
+          <button onclick="setHalfBet()">½</button>
+          <button onclick="setMaxBet()">MAX</button>
+        </div>
+      </div>
+
+      <button class="btn btn--orange btn--full btn--lg" id="playBtn" onclick="playCoinflip()">
+        🪙 Tirar moneda
+      </button>
+
+    </div>
+  </div>
+</main>
+
+<script src="../../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let choice = 'HEADS';
+  let currentBalance = 0;
+  const MULTIPLIER = 1.96;
+
+  async function loadBalance() {
+    try {
+      const data = await VB.wallet.balance();
+      currentBalance = parseFloat(data.wallet.balance);
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+    } catch(e) {}
+  }
+
+  function setChoice(c) {
+    choice = c;
+    document.getElementById('cardHeads').classList.toggle('selected', c === 'HEADS');
+    document.getElementById('cardTails').classList.toggle('selected', c === 'TAILS');
+  }
+
+  function updatePotential() {
+    const bet = parseFloat(document.getElementById('betAmount').value) || 0;
+    document.getElementById('potentialWin').textContent =
+      (bet * MULTIPLIER).toFixed(2) + ' 🪙';
+  }
+
+  function setBet(n) {
+    document.getElementById('betAmount').value = Math.min(n, 10000);
+    updatePotential();
+  }
+  function setHalfBet() {
+    const c = parseFloat(document.getElementById('betAmount').value) || 10;
+    setBet(Math.max(1, Math.floor(c / 2)));
+  }
+  function setMaxBet() { setBet(Math.min(currentBalance, 10000)); }
+
+  // Animación de la moneda
+  function flipCoin(resultIsHeads) {
+    return new Promise(resolve => {
+      const coin = document.getElementById('coin');
+      // Si cae HEADS: termina en 0° (cara visible), TAILS: en 180° (cruz visible)
+      const base = 2160; // vueltas de animación
+      const finalRot = resultIsHeads ? base : base + 180;
+      coin.style.setProperty('--final-rot', finalRot + 'deg');
+      coin.className = 'coin flipping';
+      setTimeout(() => {
+        coin.className = 'coin';
+        coin.style.transform = `rotateY(${finalRot}deg)`;
+        resolve();
+      }, 1250);
+    });
+  }
+
+  async function playCoinflip() {
+    const betAmount = parseFloat(document.getElementById('betAmount').value);
+    const playBtn   = document.getElementById('playBtn');
+    const banner    = document.getElementById('resultBanner');
+
+    if (!betAmount || betAmount < 1) { showToast('Apuesta mínima: 1 moneda', 'error'); return; }
+    if (betAmount > currentBalance)  { showToast('Saldo insuficiente', 'error'); return; }
+
+    playBtn.disabled = true;
+    playBtn.textContent = 'Tirando...';
+    banner.className = 'result-banner';
+    banner.textContent = '...';
+
+    try {
+      const data = await VB.games.coinflip({ betAmount, choice });
+
+      await flipCoin(data.coinResult === 'HEADS');
+
+      if (data.result === 'WIN') {
+        banner.className = 'result-banner win';
+        banner.innerHTML = `✓ ¡GANASTE ${data.payout.toFixed(2)} 🪙! Salió ${data.coinResult}`;
+        showToast(`¡Ganaste ${data.payout.toFixed(2)} monedas! 🎉`, 'success');
+      } else {
+        banner.className = 'result-banner loss';
+        banner.innerHTML = `✗ PERDISTE — Salió ${data.coinResult}`;
+        showToast('Perdiste. ¡Mejor suerte la próxima!', 'error');
+      }
+
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+    } catch(err) {
+      showToast(err.message, 'error');
+      banner.className = 'result-banner';
+      banner.textContent = 'Elegí un lado y apostá';
+    } finally {
+      playBtn.disabled = false;
+      playBtn.textContent = '🪙 Tirar moneda';
+    }
+  }
+
+  loadBalance();
+  updatePotential();
+</script>
+</body>
+</html>
