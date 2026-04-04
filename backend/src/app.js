@@ -10,6 +10,7 @@ const { PrismaClient } = require('@prisma/client');
 
 // ─── Inicialización ──────────────────────────────────────────────────────────
 const app    = express();
+app.set('trust proxy', 1); // Si estás detrás de un proxy (como Heroku), esto es necesario para rate limiting y CORS
 const prisma = new PrismaClient();
 const PORT   = process.env.PORT || 3000;
 
