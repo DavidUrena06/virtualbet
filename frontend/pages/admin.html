@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Admin</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 64px);
+    }
+    .admin-sidebar {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 0;
+    }
+    .sidebar-section {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      padding: 0 1.25rem;
+      margin: 1.25rem 0 0.5rem;
+    }
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-link:hover  { background: var(--bg-card); color: var(--text-primary); }
+    .sidebar-link.active { background: var(--bg-card); color: var(--purple-light); border-left-color: var(--purple); }
+    .sidebar-link .icon  { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* ── Contenido ───────────────────────────────────────────────── */
+    .admin-content { padding: 2rem; overflow-y: auto; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── Tabla admin ─────────────────────────────────────────────── */
+    .admin-table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .admin-table th {
+      background: var(--bg-secondary); padding: 10px 14px; text-align: left;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); white-space: nowrap;
+    }
+    .admin-table td { padding: 10px 14px; border-top: 1px solid var(--border); vertical-align: middle; }
+    .admin-table tr:hover td { background: var(--bg-card-hover); }
+
+    /* ── Modal ───────────────────────────────────────────────────── */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); z-index: 600;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 2rem;
+      width: 100%; max-width: 460px;
+      animation: slide-up 0.2s ease;
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+    /* ── Stat cards ──────────────────────────────────────────────── */
+    .stat-large { font-size: 2rem; font-weight: 900; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar__logo">🎰 VirtualBet Admin</div>
+  <div style="font-size:0.85rem;color:var(--text-muted);">Panel de administración</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:0.85rem;color:var(--text-secondary);" id="adminName">—</span>
+    <button class="btn btn--ghost" onclick="logout()" style="padding:6px 12px;font-size:0.82rem;">Salir</button>
+  </div>
+</nav>
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-section">General</div>
+    <div class="sidebar-link active" onclick="goTo('dashboard')" data-section="dashboard">
+      <span class="icon">📊</span> Dashboard
+    </div>
+
+    <div class="sidebar-section">Usuarios</div>
+    <div class="sidebar-link" onclick="goTo('users')" data-section="users">
+      <span class="icon">👥</span> Usuarios
+    </div>
+    <div class="sidebar-link" onclick="goTo('betcoins')" data-section="betcoins">
+      <span class="icon">🪙</span> BetCoins
+    </div>
+
+    <div class="sidebar-section">Sportsbook</div>
+    <div class="sidebar-link" onclick="goTo('matches')" data-section="matches">
+      <span class="icon">⚽</span> Partidos
+    </div>
+    <div class="sidebar-link" onclick="goTo('bets')" data-section="bets">
+      <span class="icon">🎯</span> Apuestas
+    </div>
+
+    <div class="sidebar-section">Sistema</div>
+    <div class="sidebar-link" onclick="goTo('logs')" data-section="logs">
+      <span class="icon">📋</span> Logs
+    </div>
+  </aside>
+
+  <!-- Contenido principal -->
+  <main class="admin-content">
+
+    <!-- ════ DASHBOARD ════ -->
+    <div class="section active" id="section-dashboard">
+      <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">Dashboard</h1>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-card__label">Usuarios</div>
+          <div class="stat-large stat-card__value--purple" id="stat-users">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Juegos jugados</div>
+          <div class="stat-large" id="stat-games">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Apuestas deportivas</div>
+          <div class="stat-large stat-card__value--purple" id="stat-sportbets">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Apuestas P2P</div>
+          <div class="stat-large" id="stat-p2p">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">BC apostados</div>
+          <div class="stat-large stat-card__value--gold" id="stat-wagered">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Ganancia de la casa</div>
+          <div class="stat-large stat-card__value--green" id="stat-profit">—</div>
+        </div>
+      </div>
+
+      <div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:0.75rem;font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+            House edge real
+          </div>
+          <div style="font-size:2.5rem;font-weight:900;color:var(--green-neon);" id="stat-edge">—</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Objetivo: 3–5%</div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:0.75rem;font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+            BC ganados por usuarios
+          </div>
+          <div style="font-size:2.5rem;font-weight:900;color:var(--purple-light);" id="stat-won">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ USUARIOS ════ -->
+    <div class="section" id="section-users">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <h1 style="font-size:1.5rem;font-weight:800;">Usuarios</h1>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" type="text" id="userSearch" placeholder="Buscar..."
+                 oninput="debounceSearch()" style="width:200px;">
+        </div>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Email</th>
+              <th>Balance</th>
+              <th>BC Bloqueados</th>
+              <th>Apostado</th>
+              <th>Juegos</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;">
+        <div style="font-size:0.85rem;color:var(--text-muted);" id="usersPagination">—</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn--ghost" onclick="loadUsers(usersPage-1)" id="prevUsersBtn">← Anterior</button>
+          <button class="btn btn--ghost" onclick="loadUsers(usersPage+1)" id="nextUsersBtn">Siguiente →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ BETCOINS ════ -->
+    <div class="section" id="section-betcoins">
+      <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">Gestión de BetCoins</h1>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+        <!-- Dar BC a un usuario -->
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:1rem;">Dar BetCoins a usuario</div>
+          <div class="form-group">
+            <label class="form-label">Username o ID</label>
+            <input class="form-input" type="text" id="giveUserId" placeholder="username o UUID">
+          </div>
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label class="form-label">Cantidad (BC)</label>
+            <div class="input-group">
+              <input class="form-input" type="number" id="giveAmount" min="1" value="100">
+              <span class="input-group__suffix">BC</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label class="form-label">Nota (opcional)</label>
+            <input class="form-input" type="text" id="giveNote" placeholder="Razón del depósito">
+          </div>
+          <button class="btn btn--green btn--full" style="margin-top:1rem;" onclick="giveCoins()">
+            🪙 Dar BetCoins
+          </button>
+        </div>
+
+        <!-- Dar BC a todos -->
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:1rem;">Dar BetCoins a TODOS</div>
+          <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);
+                      border-radius:var(--radius-md);padding:10px;margin-bottom:1rem;
+                      font-size:0.85rem;color:var(--gold);">
+            ⚠️ Esta acción da BetCoins a todos los usuarios activos
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cantidad por usuario (BC)</label>
+            <div class="input-group">
+              <input class="form-input" type="number" id="giveAllAmount" min="1" value="500">
+              <span class="input-group__suffix">BC</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label class="form-label">Nota</label>
+            <input class="form-input" type="text" id="giveAllNote" placeholder="Ej: Bono de fin de semana">
+          </div>
+          <button class="btn btn--orange btn--full" style="margin-top:1rem;" onclick="giveCoinsAll()">
+            🎁 Dar a todos
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Historial reciente de transacciones admin -->
+      <div style="margin-top:1.5rem;">
+        <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-secondary);
+                   text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">
+          Últimas transacciones admin
+        </h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Acción</th><th>Usuario objetivo</th><th>Payload</th><th>IP</th><th>Fecha</th></tr>
+            </thead>
+            <tbody id="bcLogsBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PARTIDOS ════ -->
+    <div class="section" id="section-matches">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <h1 style="font-size:1.5rem;font-weight:800;">Partidos</h1>
+        <button class="btn btn--orange" onclick="openMatchModal()">+ Crear partido</button>
+      </div>
+
+      <!-- Tabs estado -->
+      <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">
+        <button class="league-tab active" onclick="setMatchFilter('UPCOMING')">Próximos</button>
+        <button class="league-tab" onclick="setMatchFilter('LIVE')">En vivo</button>
+        <button class="league-tab" onclick="setMatchFilter('FINISHED')">Finalizados</button>
+      </div>
+      <style>
+        .league-tab { padding:6px 14px; border-radius:99px; font-size:0.82rem; font-weight:600;
+          border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-secondary);
+          cursor:pointer; transition:all 0.15s; }
+        .league-tab.active { background:rgba(124,58,237,0.15); border-color:var(--purple); color:var(--purple-light); }
+      </style>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Liga</th><th>Partido</th><th>Odds</th>
+              <th>Inicio</th><th>Apuestas</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="matchesBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════ APUESTAS ════ -->
+    <div class="section" id="section-bets">
+      <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">Apuestas deportivas</h1>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Usuario</th><th>Partido</th><th>Selección</th><th>Monto</th><th>Cuota</th><th>Pot. ganancia</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="betsBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════ LOGS ════ -->
+    <div class="section" id="section-logs">
+      <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">Logs del sistema</h1>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Admin</th><th>Acción</th><th>Objetivo</th><th>IP</th><th>Detalle</th><th>Fecha</th></tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:1rem;">
+        <button class="btn btn--ghost" onclick="loadLogs(logsPage-1)">← Anterior</button>
+        <button class="btn btn--ghost" onclick="loadLogs(logsPage+1)">Siguiente →</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal crear partido -->
+<div class="modal-bg" id="matchModal" onclick="closeModal(event,'matchModal')">
+  <div class="modal">
+    <h3>⚽ Crear partido</h3>
+    <div style="display:grid;gap:0.75rem;">
+      <div class="form-group">
+        <label class="form-label">Liga</label>
+        <select class="form-input" id="mLeague">
+          <option value="LDA">🇨🇷 LDA</option>
+          <option value="LA_LIGA">🇪🇸 La Liga</option>
+          <option value="PREMIER">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</option>
+          <option value="CHAMPIONS">🏆 Champions</option>
+          <option value="SERIE_A">🇮🇹 Serie A</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="form-group">
+          <label class="form-label">Equipo local</label>
+          <input class="form-input" type="text" id="mHome" placeholder="Saprissa">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Equipo visita</label>
+          <input class="form-input" type="text" id="mAway" placeholder="Alajuelense">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="form-group">
+          <label class="form-label">Odd local</label>
+          <input class="form-input" type="number" id="mOddHome" step="0.01" min="1.01" value="2.10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Odd empate</label>
+          <input class="form-input" type="number" id="mOddDraw" step="0.01" min="1.01" value="3.20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Odd visita</label>
+          <input class="form-input" type="number" id="mOddAway" step="0.01" min="1.01" value="3.50">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha y hora de inicio</label>
+        <input class="form-input" type="datetime-local" id="mStartsAt">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:0.5rem;">
+        <button class="btn btn--ghost" style="flex:1;" onclick="document.getElementById('matchModal').classList.remove('open')">
+          Cancelar
+        </button>
+        <button class="btn btn--orange" style="flex:1;" onclick="createMatch()">
+          Crear partido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal resolver partido -->
+<div class="modal-bg" id="resolveModal" onclick="closeModal(event,'resolveModal')">
+  <div class="modal">
+    <h3>🏁 Resolver partido</h3>
+    <div id="resolveMatchInfo" style="background:var(--bg-secondary);border-radius:var(--radius-md);
+         padding:12px;margin-bottom:1rem;font-size:0.9rem;color:var(--text-secondary);">—</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">
+      <div class="form-group">
+        <label class="form-label">Goles local</label>
+        <input class="form-input" type="number" id="rScoreHome" min="0" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Goles visita</label>
+        <input class="form-input" type="number" id="rScoreAway" min="0" value="0">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label class="form-label">Resultado oficial</label>
+      <div style="display:flex;gap:8px;">
+        <button class="odd-btn" id="rHome" onclick="setResult('HOME')">
+          <div class="odd-label">Local</div>
+          <div id="rHomeLabel" style="font-weight:700;">—</div>
+        </button>
+        <button class="odd-btn" id="rDraw" onclick="setResult('DRAW')">
+          <div class="odd-label">Empate</div>
+          <div style="font-weight:700;">X</div>
+        </button>
+        <button class="odd-btn" id="rAway" onclick="setResult('AWAY')">
+          <div class="odd-label">Visita</div>
+          <div id="rAwayLabel" style="font-weight:700;">—</div>
+        </button>
+      </div>
+    </div>
+
+    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+                border-radius:var(--radius-md);padding:10px;margin-bottom:1rem;
+                font-size:0.82rem;color:#fca5a5;">
+      ⚠️ Esto paga apuestas deportivas y resuelve apuestas P2P automáticamente. No se puede deshacer.
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn--ghost" style="flex:1;" onclick="document.getElementById('resolveModal').classList.remove('open')">
+        Cancelar
+      </button>
+      <button class="btn btn--red" style="flex:1;" onclick="resolveMatch()">
+        Confirmar resultado
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de acciones sobre usuario -->
+<div class="modal-bg" id="userModal" onclick="closeModal(event,'userModal')">
+  <div class="modal">
+    <h3 id="userModalTitle">Acciones — usuario</h3>
+    <input type="hidden" id="userModalId">
+
+    <div style="display:grid;gap:8px;">
+      <button class="btn btn--green" onclick="openGiveToUser()">🪙 Dar BetCoins</button>
+      <button class="btn btn--ghost" style="color:var(--red-accent);" onclick="openBanUser()">🚫 Banear usuario</button>
+      <button class="btn btn--ghost" onclick="openUnbanUser()">✓ Desbanear</button>
+      <button class="btn btn--ghost" onclick="document.getElementById('userModal').classList.remove('open')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+  requireAdminRole();
+
+  // ── Estado global ──────────────────────────────────────────────────────
+  let usersPage   = 1;
+  let logsPage    = 1;
+  let matchFilter = 'UPCOMING';
+  let searchTimer = null;
+  let resolveMatchId = null;
+  let resolveResult  = null;
+  let selectedUserId = null;
+
+  const adminUser = Auth.getUser();
+  document.getElementById('adminName').textContent = adminUser?.username || '—';
+
+  // ── Navegación ────────────────────────────────────────────────────────
+  function goTo(section) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('section-' + section).classList.add('active');
+    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+
+    // Carga datos al entrar a cada sección
+    const loaders = {
+      dashboard: loadStats,
+      users:     () => loadUsers(1),
+      betcoins:  loadBcLogs,
+      matches:   () => loadMatches('UPCOMING'),
+      bets:      loadAllBets,
+      logs:      () => loadLogs(1),
+    };
+    loaders[section]?.();
+  }
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const { stats } = await VB.admin.stats();
+      document.getElementById('stat-users').textContent     = stats.totalUsers.toLocaleString();
+      document.getElementById('stat-games').textContent     = stats.totalGames.toLocaleString();
+      document.getElementById('stat-sportbets').textContent = stats.totalSportBets.toLocaleString();
+      document.getElementById('stat-p2p').textContent       = stats.totalP2PBets.toLocaleString();
+      document.getElementById('stat-wagered').textContent   = parseFloat(stats.totalWageredBC).toFixed(0) + ' BC';
+      document.getElementById('stat-profit').textContent    = parseFloat(stats.houseProfit).toFixed(2) + ' BC';
+      document.getElementById('stat-edge').textContent      = stats.houseEdgeReal;
+      document.getElementById('stat-won').textContent       = parseFloat(stats.totalWonBC).toFixed(0) + ' BC';
+    } catch (err) {
+      showToast('Error al cargar stats', 'error');
+    }
+  }
+
+  // ── USUARIOS ──────────────────────────────────────────────────────────
+  function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadUsers(1), 400);
+  }
+
+  async function loadUsers(page = 1) {
+    if (page < 1) return;
+    usersPage = page;
+    const search = document.getElementById('userSearch')?.value || '';
+    const tbody  = document.getElementById('usersBody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+
+    try {
+      const { users, pagination } = await VB.admin.users(page, search);
+
+      document.getElementById('usersPagination').textContent =
+        `Página ${pagination.page} de ${pagination.pages} · ${pagination.total} usuarios`;
+      document.getElementById('prevUsersBtn').disabled = page <= 1;
+      document.getElementById('nextUsersBtn').disabled = page >= pagination.pages;
+
+      tbody.innerHTML = users.map(u => {
+        const bal      = parseFloat(u.wallet?.balance || 0);
+        const locked   = parseFloat(u.wallet?.lockedBalance || 0);
+        const wagered  = parseFloat(u.wallet?.totalWagered || 0);
+        const isBanned = u.isBanned;
+
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:1.2rem;">${u.avatarEmoji || '🎰'}</span>
+              <div>
+                <div style="font-weight:600;">${u.username}</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);">${u.role}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--text-secondary);font-size:0.82rem;">${u.email}</td>
+          <td style="font-weight:700;color:var(--green-neon);">${(bal - locked).toFixed(2)} BC</td>
+          <td style="color:var(--gold);">${locked.toFixed(2)} BC</td>
+          <td style="color:var(--text-secondary);">${wagered.toFixed(2)} BC</td>
+          <td style="color:var(--text-secondary);">${(u._count?.gameHistory || 0)}</td>
+          <td>
+            ${isBanned
+              ? '<span class="badge badge--loss">Baneado</span>'
+              : '<span class="badge badge--win">Activo</span>'}
+          </td>
+          <td>
+            <button class="btn btn--ghost" style="padding:4px 10px;font-size:0.78rem;"
+              onclick="openUserModal('${u.id}','${u.username}')">
+              Acciones
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">Error al cargar</td></tr>`;
+    }
+  }
+
+  function openUserModal(userId, username) {
+    selectedUserId = userId;
+    document.getElementById('userModalTitle').textContent = `Acciones — ${username}`;
+    document.getElementById('userModalId').value = userId;
+    document.getElementById('userModal').classList.add('open');
+  }
+
+  async function openGiveToUser() {
+    document.getElementById('userModal').classList.remove('open');
+    goTo('betcoins');
+    document.getElementById('giveUserId').value = selectedUserId;
+  }
+
+  async function openBanUser() {
+    const reason = prompt('Razón del baneo:');
+    if (reason === null) return;
+    try {
+      await VB.admin.banUser({ userId: selectedUserId, reason });
+      showToast('Usuario baneado', 'success');
+      document.getElementById('userModal').classList.remove('open');
+      loadUsers(usersPage);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function openUnbanUser() {
+    try {
+      await VB.admin.unbanUser({ userId: selectedUserId });
+      showToast('Usuario desbaneado', 'success');
+      document.getElementById('userModal').classList.remove('open');
+      loadUsers(usersPage);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  // ── BETCOINS ──────────────────────────────────────────────────────────
+  async function giveCoins() {
+    const rawId = document.getElementById('giveUserId').value.trim();
+    const amount = parseFloat(document.getElementById('giveAmount').value);
+    const note   = document.getElementById('giveNote').value.trim();
+
+    if (!rawId || !amount) { showToast('Completá los campos', 'error'); return; }
+
+    // Busca por username si no es UUID
+    let userId = rawId;
+    if (!rawId.includes('-')) {
+      try {
+        const { users } = await VB.admin.users(1, rawId);
+        const found = users.find(u => u.username.toLowerCase() === rawId.toLowerCase());
+        if (!found) { showToast('Usuario no encontrado', 'error'); return; }
+        userId = found.id;
+      } catch { showToast('Error al buscar usuario', 'error'); return; }
+    }
+
+    try {
+      const data = await VB.admin.giveBetCoins({ userId, amount, note });
+      showToast(data.message, 'success');
+      document.getElementById('giveUserId').value = '';
+      loadBcLogs();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function giveCoinsAll() {
+    const amount = parseFloat(document.getElementById('giveAllAmount').value);
+    const note   = document.getElementById('giveAllNote').value.trim();
+    if (!amount) { showToast('Ingresá un monto', 'error'); return; }
+    if (!confirm(`¿Dar ${amount} BC a TODOS los usuarios?`)) return;
+
+    try {
+      const data = await VB.admin.giveBetCoinsAll({ amount, note });
+      showToast(data.message, 'success');
+      loadBcLogs();
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function loadBcLogs() {
+    const tbody = document.getElementById('bcLogsBody');
+    try {
+      const { logs } = await VB.admin.logs(1);
+      const bcLogs = logs.filter(l => l.action.includes('COIN') || l.action.includes('BETCOIN'));
+      tbody.innerHTML = bcLogs.slice(0, 15).map(l => `
+        <tr>
+          <td style="font-weight:600;">${l.action}</td>
+          <td>${l.targetUser?.username || '— todos —'}</td>
+          <td style="color:var(--text-secondary);font-size:0.8rem;">${JSON.stringify(l.payload || {})}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem;">${l.ipAddress || '—'}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem;">${new Date(l.createdAt).toLocaleString('es-CR')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Sin logs de BetCoins</td></tr>';
+    } catch { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);">Error</td></tr>'; }
+  }
+
+  // ── PARTIDOS ──────────────────────────────────────────────────────────
+  function setMatchFilter(status) {
+    matchFilter = status;
+    document.querySelectorAll('.league-tab').forEach(b => {
+      b.classList.toggle('active',
+        (status === 'UPCOMING' && b.textContent === 'Próximos') ||
+        (status === 'LIVE'     && b.textContent === 'En vivo') ||
+        (status === 'FINISHED' && b.textContent === 'Finalizados'));
+    });
+    loadMatches(status);
+  }
+
+  async function loadMatches(status = 'UPCOMING') {
+    const tbody = document.getElementById('matchesBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+
+    try {
+      const { matches } = await VB.sports.matches('', status);
+
+      if (!matches.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">Sin partidos en este estado</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = matches.map(m => `
+        <tr>
+          <td><span style="font-size:0.8rem;color:var(--text-muted);">${m.league}</span></td>
+          <td>
+            <div style="font-weight:600;">${m.teamHome} vs ${m.teamAway}</div>
+            ${m.result ? `<div style="font-size:0.75rem;color:var(--text-muted);">Resultado: ${m.result} · ${m.scoreHome ?? '?'}-${m.scoreAway ?? '?'}</div>` : ''}
+          </td>
+          <td style="font-size:0.82rem;">
+            <span style="color:#60a5fa;">${parseFloat(m.oddHome).toFixed(2)}</span> /
+            <span style="color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</span> /
+            <span style="color:var(--red-accent);">${parseFloat(m.oddAway).toFixed(2)}</span>
+          </td>
+          <td style="font-size:0.82rem;color:var(--text-secondary);">
+            ${new Date(m.startsAt).toLocaleString('es-CR')}
+          </td>
+          <td style="color:var(--text-muted);">—</td>
+          <td>
+            <span class="badge ${m.status === 'UPCOMING' ? 'badge--pending' : m.status === 'LIVE' ? 'badge--win' : ''}"
+                  style="${m.status === 'FINISHED' ? 'background:rgba(124,58,237,0.15);color:var(--purple-light);' : ''}">
+              ${m.status}
+            </span>
+          </td>
+          <td>
+            ${m.status !== 'FINISHED' && m.status !== 'CANCELLED'
+              ? `<button class="btn btn--primary" style="padding:4px 12px;font-size:0.78rem;"
+                   onclick="openResolveModal('${m.id}','${m.teamHome}','${m.teamAway}')">
+                   Resolver
+                 </button>`
+              : '<span style="color:var(--text-muted);font-size:0.8rem;">—</span>'}
+          </td>
+        </tr>
+      `).join('');
+    } catch { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Error al cargar</td></tr>'; }
+  }
+
+  function openMatchModal() {
+    // Fecha mínima = ahora + 30 min
+    const now = new Date(Date.now() + 30 * 60 * 1000);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('mStartsAt').value =
+      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('matchModal').classList.add('open');
+  }
+
+  async function createMatch() {
+    const league   = document.getElementById('mLeague').value;
+    const teamHome = document.getElementById('mHome').value.trim();
+    const teamAway = document.getElementById('mAway').value.trim();
+    const oddHome  = parseFloat(document.getElementById('mOddHome').value);
+    const oddDraw  = parseFloat(document.getElementById('mOddDraw').value);
+    const oddAway  = parseFloat(document.getElementById('mOddAway').value);
+    const startsAt = document.getElementById('mStartsAt').value;
+
+    if (!teamHome || !teamAway || !startsAt) { showToast('Completá todos los campos', 'error'); return; }
+    if (oddHome < 1.01 || oddDraw < 1.01 || oddAway < 1.01) { showToast('Odds mínimos: 1.01', 'error'); return; }
+
+    try {
+      await VB.admin.createMatch({ league, teamHome, teamAway, oddHome, oddDraw, oddAway, startsAt });
+      showToast('Partido creado', 'success');
+      document.getElementById('matchModal').classList.remove('open');
+      loadMatches(matchFilter);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  function openResolveModal(matchId, home, away) {
+    resolveMatchId = matchId;
+    resolveResult  = null;
+    document.getElementById('resolveMatchInfo').textContent = `${home} vs ${away}`;
+    document.getElementById('rHomeLabel').textContent = home;
+    document.getElementById('rAwayLabel').textContent = away;
+    document.getElementById('rScoreHome').value = 0;
+    document.getElementById('rScoreAway').value = 0;
+    ['rHome','rDraw','rAway'].forEach(id => document.getElementById(id).classList.remove('selected'));
+    document.getElementById('resolveModal').classList.add('open');
+  }
+
+  function setResult(result) {
+    resolveResult = result;
+    ['rHome','rDraw','rAway'].forEach(id => document.getElementById(id).classList.remove('selected'));
+    const idMap = { HOME:'rHome', DRAW:'rDraw', AWAY:'rAway' };
+    document.getElementById(idMap[result]).classList.add('selected');
+  }
+
+  async function resolveMatch() {
+    if (!resolveResult) { showToast('Elegí un resultado', 'error'); return; }
+    const scoreHome = parseInt(document.getElementById('rScoreHome').value);
+    const scoreAway = parseInt(document.getElementById('rScoreAway').value);
+
+    try {
+      const data = await VB.admin.resolveMatch({
+        matchId: resolveMatchId, result: resolveResult, scoreHome, scoreAway,
+      });
+      showToast(`Resuelto. Pagadas: ${data.paidSportBets} apuestas deportivas + ${data.resolvedP2P} P2P`, 'success');
+      document.getElementById('resolveModal').classList.remove('open');
+      loadMatches(matchFilter);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  // ── APUESTAS RECIENTES ────────────────────────────────────────────────
+  async function loadAllBets() {
+    const tbody = document.getElementById('betsBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Cargando...</td></tr>';
+    try {
+      // Usamos la vista de stats para no exponer un endpoint extra
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Ver historial desde perfil de usuario</td></tr>';
+    } catch { }
+  }
+
+  // ── LOGS ──────────────────────────────────────────────────────────────
+  async function loadLogs(page = 1) {
+    if (page < 1) return;
+    logsPage = page;
+    const tbody = document.getElementById('logsBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+
+    try {
+      const { logs } = await VB.admin.logs(page);
+      tbody.innerHTML = logs.map(l => `
+        <tr>
+          <td style="font-weight:600;">${l.admin?.username || '—'}</td>
+          <td>
+            <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;
+                         font-size:0.78rem;">${l.action}</code>
+          </td>
+          <td style="color:var(--text-secondary);">${l.targetUser?.username || '—'}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem;">${l.ipAddress || '—'}</td>
+          <td style="color:var(--text-muted);font-size:0.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;">
+            ${JSON.stringify(l.payload || {})}
+          </td>
+          <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap;">
+            ${new Date(l.createdAt).toLocaleString('es-CR')}
+          </td>
+        </tr>
+      `).join('');
+    } catch { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Error al cargar logs</td></tr>'; }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function closeModal(e, id) {
+    if (e.target === document.getElementById(id)) {
+      document.getElementById(id).classList.remove('open');
+    }
+  }
+
+  function logout() { Auth.clear(); window.location.href = './login.html'; }
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  loadStats();
+</script>
+</body>
+</html>
