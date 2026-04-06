@@ -6,7 +6,7 @@ const { body } = require('express-validator');
 const {
   createPrivateBet, joinPrivateBet,
   getPrivateBet, getMyPrivateBets, cancelPrivateBet,
-} = require('./p2p.controller');
+} = require('../p2p/p2p.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 
 const router = express.Router();
