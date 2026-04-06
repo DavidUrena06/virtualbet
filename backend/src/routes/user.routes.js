@@ -27,7 +27,7 @@ router.get('/profile', async (req, res) => {
           },
         },
         _count: {
-          select: { gameHistory: true, bets: true },
+          select: { gameHistory: true, sportBets: true },
         },
       },
     });
