@@ -1,5 +1,6 @@
-// VirtualBet - Schema completo de base de datos
-// Conecta con Supabase PostgreSQL via DATABASE_URL en .env
+// VirtualBet — Schema completo v2
+// Moneda: BetCoins (BC)
+// Incluye: Sportsbook, Sistema Social, Apuestas P2P
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +12,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─── USUARIOS ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// USUARIOS Y AUTENTICACIÓN
+// ══════════════════════════════════════════════════════════════
+
 model User {
   id           String   @id @default(uuid())
   username     String   @unique
@@ -20,18 +24,22 @@ model User {
   role         Role     @default(USER)
   isBanned     Boolean  @default(false) @map("is_banned")
   banReason    String?  @map("ban_reason")
+  avatarEmoji  String   @default("🎰") @map("avatar_emoji")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  // Relaciones
-  wallet        Wallet?
-  transactions  Transaction[]
-  gameHistory   GameHistory[]
-  bets          Bet[]
-  adminLogsTarget AdminLog[] @relation("TargetUser")
-  adminLogsBy   AdminLog[]   @relation("AdminUser")
-  coinSchedules CoinSchedule[]
-  sessions      Session[]
+  wallet                   Wallet?
+  transactions             Transaction[]
+  gameHistory              GameHistory[]
+  sportBets                SportBet[]
+  privateBetsCreated       PrivateBet[]              @relation("PrivateBetCreator")
+  privateBetParticipations PrivateBetParticipant[]
+  friendRequestsSent       Friendship[]              @relation("Requester")
+  friendRequestsReceived   Friendship[]              @relation("Addressee")
+  adminLogsBy              AdminLog[]                @relation("AdminUser")
+  adminLogsTarget          AdminLog[]                @relation("TargetUser")
+  coinSchedules            CoinSchedule[]
+  notifications            Notification[]
 
   @@map("users")
 }
@@ -41,24 +49,30 @@ enum Role {
   USER
 }
 
-// ─── WALLET (BALANCE DE MONEDAS) ────────────────────────────────────────────
-model Wallet {
-  id            String   @id @default(uuid())
-  userId        String   @unique @map("user_id")
-  balance       Decimal  @default(0) @db.Decimal(18, 2)
-  totalWagered  Decimal  @default(0) @map("total_wagered") @db.Decimal(18, 2)
-  totalWon      Decimal  @default(0) @map("total_won") @db.Decimal(18, 2)
-  totalDeposited Decimal @default(0) @map("total_deposited") @db.Decimal(18, 2)
-  updatedAt     DateTime @updatedAt @map("updated_at")
+// ══════════════════════════════════════════════════════════════
+// WALLET — BetCoins
+// ══════════════════════════════════════════════════════════════
 
-  // Relaciones
+model Wallet {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  balance         Decimal  @default(0) @db.Decimal(18, 2)
+  lockedBalance   Decimal  @default(0) @map("locked_balance") @db.Decimal(18, 2)
+  totalWagered    Decimal  @default(0) @map("total_wagered") @db.Decimal(18, 2)
+  totalWon        Decimal  @default(0) @map("total_won") @db.Decimal(18, 2)
+  totalDeposited  Decimal  @default(0) @map("total_deposited") @db.Decimal(18, 2)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@map("wallets")
 }
 
-// ─── TRANSACCIONES (LEDGER COMPLETO) ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// LEDGER DE TRANSACCIONES
+// ══════════════════════════════════════════════════════════════
+
 model Transaction {
   id            String          @id @default(uuid())
   userId        String          @map("user_id")
@@ -67,11 +81,10 @@ model Transaction {
   amount        Decimal         @db.Decimal(18, 2)
   balanceBefore Decimal         @map("balance_before") @db.Decimal(18, 2)
   balanceAfter  Decimal         @map("balance_after") @db.Decimal(18, 2)
-  reference     String?         // ID del juego o apuesta relacionada
-  note          String?         // Descripción legible
+  reference     String?
+  note          String?
   createdAt     DateTime        @default(now()) @map("created_at")
 
-  // Relaciones
   user   User   @relation(fields: [userId], references: [id])
   wallet Wallet @relation(fields: [walletId], references: [id])
 
@@ -79,17 +92,178 @@ model Transaction {
 }
 
 enum TransactionType {
-  ADMIN_DEPOSIT    // Admin da monedas
-  ADMIN_WITHDRAW   // Admin quita monedas
-  GAME_BET         // Apuesta en juego
-  GAME_WIN         // Ganancia de juego
-  SPORT_BET        // Apuesta deportiva
-  SPORT_WIN        // Ganancia deportiva
-  SPORT_REFUND     // Reembolso de apuesta (partido cancelado)
-  SCHEDULED_BONUS  // Recarga automática programada
+  ADMIN_DEPOSIT
+  ADMIN_WITHDRAW
+  GAME_BET
+  GAME_WIN
+  SPORT_BET
+  SPORT_WIN
+  SPORT_REFUND
+  P2P_BET_LOCK
+  P2P_BET_WIN
+  P2P_BET_REFUND
+  P2P_COMMISSION
+  SCHEDULED_BONUS
 }
 
-// ─── HISTORIAL DE JUEGOS ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// SISTEMA SOCIAL — AMIGOS
+// ══════════════════════════════════════════════════════════════
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String           @map("requester_id")
+  addresseeId String           @map("addressee_id")
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  requester User @relation("Requester", fields: [requesterId], references: [id])
+  addressee User @relation("Addressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+  @@map("friendships")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+// ══════════════════════════════════════════════════════════════
+// SPORTSBOOK — PARTIDOS Y APUESTAS DEPORTIVAS
+// ══════════════════════════════════════════════════════════════
+
+model Match {
+  id          String       @id @default(uuid())
+  league      String
+  teamHome    String       @map("team_home")
+  teamAway    String       @map("team_away")
+  oddHome     Decimal      @map("odd_home") @db.Decimal(6, 2)
+  oddDraw     Decimal      @map("odd_draw") @db.Decimal(6, 2)
+  oddAway     Decimal      @map("odd_away") @db.Decimal(6, 2)
+  status      MatchStatus  @default(UPCOMING)
+  result      MatchResult?
+  scoreHome   Int?         @map("score_home")
+  scoreAway   Int?         @map("score_away")
+  startsAt    DateTime     @map("starts_at")
+  resolvedAt  DateTime?    @map("resolved_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  sportBets   SportBet[]
+  privateBets PrivateBet[]
+
+  @@map("matches")
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+enum MatchResult {
+  HOME
+  DRAW
+  AWAY
+}
+
+model SportBet {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  matchId      String       @map("match_id")
+  selection    BetSelection
+  amount       Decimal      @db.Decimal(18, 2)
+  oddAtBet     Decimal      @map("odd_at_bet") @db.Decimal(6, 2)
+  potentialWin Decimal      @map("potential_win") @db.Decimal(18, 2)
+  status       BetStatus    @default(PENDING)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  resolvedAt   DateTime?    @map("resolved_at")
+
+  user  User  @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@map("sport_bets")
+}
+
+enum BetSelection {
+  HOME
+  DRAW
+  AWAY
+}
+
+enum BetStatus {
+  PENDING
+  WON
+  LOST
+  REFUNDED
+}
+
+// ══════════════════════════════════════════════════════════════
+// APUESTAS P2P
+// ══════════════════════════════════════════════════════════════
+
+model PrivateBet {
+  id              String           @id @default(uuid())
+  creatorId       String           @map("creator_id")
+  matchId         String           @map("match_id")
+  title           String
+  description     String?
+  minAmount       Decimal          @map("min_amount") @db.Decimal(18, 2)
+  maxParticipants Int              @default(10) @map("max_participants")
+  houseCommission Decimal          @default(0.05) @map("house_commission") @db.Decimal(4, 4)
+  totalPool       Decimal          @default(0) @map("total_pool") @db.Decimal(18, 2)
+  commissionTaken Decimal          @default(0) @map("commission_taken") @db.Decimal(18, 2)
+  status          PrivateBetStatus @default(OPEN)
+  lockedAt        DateTime?        @map("locked_at")
+  resolvedAt      DateTime?        @map("resolved_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  creator      User                    @relation("PrivateBetCreator", fields: [creatorId], references: [id])
+  match        Match                   @relation(fields: [matchId], references: [id])
+  participants PrivateBetParticipant[]
+
+  @@map("private_bets")
+}
+
+enum PrivateBetStatus {
+  OPEN
+  LOCKED
+  RESOLVED
+  CANCELLED
+}
+
+model PrivateBetParticipant {
+  id           String            @id @default(uuid())
+  privateBetId String            @map("private_bet_id")
+  userId       String            @map("user_id")
+  selection    BetSelection
+  amount       Decimal           @db.Decimal(18, 2)
+  payout       Decimal           @default(0) @db.Decimal(18, 2)
+  status       ParticipantStatus @default(ACTIVE)
+  joinedAt     DateTime          @default(now()) @map("joined_at")
+  resolvedAt   DateTime?         @map("resolved_at")
+
+  privateBet PrivateBet @relation(fields: [privateBetId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([privateBetId, userId])
+  @@map("private_bet_participants")
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  WON
+  LOST
+  REFUNDED
+}
+
+// ══════════════════════════════════════════════════════════════
+// JUEGOS DEL CASINO
+// ══════════════════════════════════════════════════════════════
+
 model GameHistory {
   id         String     @id @default(uuid())
   userId     String     @map("user_id")
@@ -98,10 +272,9 @@ model GameHistory {
   multiplier Decimal    @db.Decimal(10, 4)
   payout     Decimal    @db.Decimal(18, 2)
   result     GameResult
-  gameData   Json       @map("game_data") // datos específicos del juego (semilla, celdas, etc.)
+  gameData   Json       @map("game_data")
   playedAt   DateTime   @default(now()) @map("played_at")
 
-  // Relaciones
   user User @relation(fields: [userId], references: [id])
 
   @@map("game_history")
@@ -123,107 +296,68 @@ enum GameResult {
   REFUND
 }
 
-// ─── PARTIDOS DEPORTIVOS ─────────────────────────────────────────────────────
-model Match {
-  id           String      @id @default(uuid())
-  league       String      // "LDA", "LA_LIGA", "PREMIER", etc.
-  teamHome     String      @map("team_home")
-  teamAway     String      @map("team_away")
-  oddHome      Decimal     @map("odd_home") @db.Decimal(6, 2)
-  oddDraw      Decimal     @map("odd_draw") @db.Decimal(6, 2)
-  oddAway      Decimal     @map("odd_away") @db.Decimal(6, 2)
-  status       MatchStatus @default(UPCOMING)
-  result       MatchResult? // null hasta que el admin resuelve
-  scoreHome    Int?        @map("score_home")
-  scoreAway    Int?        @map("score_away")
-  startsAt     DateTime    @map("starts_at")
-  resolvedAt   DateTime?   @map("resolved_at")
-  createdAt    DateTime    @default(now()) @map("created_at")
+// ══════════════════════════════════════════════════════════════
+// NOTIFICACIONES
+// ══════════════════════════════════════════════════════════════
 
-  // Relaciones
-  bets Bet[]
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
 
-  @@map("matches")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
-enum MatchStatus {
-  UPCOMING  // Aceptando apuestas
-  LIVE      // Partido en curso, apuestas cerradas
-  FINISHED  // Resuelto
-  CANCELLED // Reembolso
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  P2P_INVITE
+  P2P_NEW_PARTICIPANT
+  P2P_LOCKED
+  P2P_RESOLVED
+  SPORT_BET_RESOLVED
+  ADMIN_MESSAGE
 }
 
-enum MatchResult {
-  HOME
-  DRAW
-  AWAY
-}
+// ══════════════════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════════════════
 
-// ─── APUESTAS DEPORTIVAS ─────────────────────────────────────────────────────
-model Bet {
-  id           String     @id @default(uuid())
-  userId       String     @map("user_id")
-  matchId      String     @map("match_id")
-  selection    BetSelection
-  amount       Decimal    @db.Decimal(18, 2)
-  oddAtBet     Decimal    @map("odd_at_bet") @db.Decimal(6, 2) // cuota al momento de apostar
-  potentialWin Decimal    @map("potential_win") @db.Decimal(18, 2)
-  status       BetStatus  @default(PENDING)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  resolvedAt   DateTime?  @map("resolved_at")
-
-  // Relaciones
-  user  User  @relation(fields: [userId], references: [id])
-  match Match @relation(fields: [matchId], references: [id])
-
-  @@map("bets")
-}
-
-enum BetSelection {
-  HOME
-  DRAW
-  AWAY
-}
-
-enum BetStatus {
-  PENDING  // Esperando resultado
-  WON
-  LOST
-  REFUNDED
-}
-
-// ─── LOGS DEL ADMINISTRADOR ──────────────────────────────────────────────────
 model AdminLog {
   id           String   @id @default(uuid())
   adminId      String   @map("admin_id")
-  action       String   // "BAN_USER", "GIVE_COINS", "CREATE_MATCH", etc.
+  action       String
   targetUserId String?  @map("target_user_id")
-  payload      Json?    // datos adicionales de la acción
+  payload      Json?
   ipAddress    String?  @map("ip_address")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  // Relaciones
   admin      User  @relation("AdminUser", fields: [adminId], references: [id])
   targetUser User? @relation("TargetUser", fields: [targetUserId], references: [id])
 
   @@map("admin_logs")
 }
 
-// ─── PROGRAMACIÓN DE RECARGAS ────────────────────────────────────────────────
 model CoinSchedule {
-  id           String       @id @default(uuid())
-  createdById  String       @map("created_by_id")
-  name         String       // descripción legible
-  targetType   TargetType   @map("target_type")
-  targetUserId String?      @map("target_user_id") // null = todos los usuarios
-  amount       Decimal      @db.Decimal(18, 2)
-  cronExpr     String       @map("cron_expr") // "0 0 1 * *" = cada 1ro del mes
-  isActive     Boolean      @default(true) @map("is_active")
-  lastRun      DateTime?    @map("last_run")
-  nextRun      DateTime?    @map("next_run")
-  createdAt    DateTime     @default(now()) @map("created_at")
+  id           String     @id @default(uuid())
+  createdById  String     @map("created_by_id")
+  name         String
+  targetType   TargetType @map("target_type")
+  targetUserId String?    @map("target_user_id")
+  amount       Decimal    @db.Decimal(18, 2)
+  cronExpr     String     @map("cron_expr")
+  isActive     Boolean    @default(true) @map("is_active")
+  lastRun      DateTime?  @map("last_run")
+  nextRun      DateTime?  @map("next_run")
+  createdAt    DateTime   @default(now()) @map("created_at")
 
-  // Relaciones
   createdBy User @relation(fields: [createdById], references: [id])
 
   @@map("coin_schedules")
@@ -232,20 +366,4 @@ model CoinSchedule {
 enum TargetType {
   ALL_USERS
   SPECIFIC_USER
-}
-
-// ─── SESIONES (para invalidar JWT si se banea) ──────────────────────────────
-model Session {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tokenHash String   @map("token_hash")
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Relaciones
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
 }
