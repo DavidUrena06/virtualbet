@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Sportsbook</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .league-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .league-tab  {
+      padding:6px 16px; border-radius:99px; font-size:0.85rem; font-weight:600;
+      border:1px solid var(--border); background:var(--bg-secondary);
+      color:var(--text-secondary); cursor:pointer; transition:all 0.15s;
+    }
+    .league-tab:hover  { border-color:var(--border-hover); color:var(--text-primary); }
+    .league-tab.active { background:rgba(124,58,237,0.15); border-color:var(--purple); color:var(--purple-light); }
+
+    .match-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:1.25rem;
+      margin-bottom:0.75rem; transition:all 0.2s;
+    }
+    .match-card:hover { border-color:var(--border-hover); }
+
+    .odds-row { display:flex; gap:8px; margin-top:1rem; }
+    .odd-btn  {
+      flex:1; padding:10px 8px; border-radius:var(--radius-md);
+      border:1px solid var(--border); background:var(--bg-secondary);
+      cursor:pointer; transition:all 0.15s; text-align:center;
+    }
+    .odd-btn:hover  { border-color:var(--purple); }
+    .odd-btn.selected {
+      background:rgba(124,58,237,0.2); border-color:var(--purple);
+      box-shadow:0 0 12px rgba(124,58,237,0.2);
+    }
+    .odd-label  { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+    .odd-value  { font-size:1.1rem; font-weight:800; color:var(--green-neon); }
+    .odd-btn.selected .odd-value { color:var(--purple-light); }
+
+    /* Modal de apuesta */
+    .bet-modal-bg {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.7); z-index:500;
+      align-items:center; justify-content:center;
+    }
+    .bet-modal-bg.open { display:flex; }
+    .bet-modal {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-xl); padding:2rem;
+      width:100%; max-width:420px; margin:1rem;
+      animation:slide-up 0.25s ease;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="./dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">⚽ Sportsbook</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span> BC</div>
+</nav>
+
+<main class="container page">
+
+  <!-- Tabs de ligas -->
+  <div class="league-tabs" id="leagueTabs">
+    <div class="league-tab active" onclick="setLeague('')">Todos</div>
+    <div class="league-tab" onclick="setLeague('LDA')">🇨🇷 LDA</div>
+    <div class="league-tab" onclick="setLeague('LA_LIGA')">🇪🇸 La Liga</div>
+    <div class="league-tab" onclick="setLeague('PREMIER')">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</div>
+    <div class="league-tab" onclick="setLeague('CHAMPIONS')">🏆 Champions</div>
+  </div>
+
+  <!-- Stats rápidos -->
+  <div class="stats-grid" style="margin-bottom:1.5rem;">
+    <div class="stat-card">
+      <div class="stat-card__label">Balance disponible</div>
+      <div class="stat-card__value stat-card__value--green" id="balanceDisplay">— BC</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Apuestas activas</div>
+      <div class="stat-card__value stat-card__value--purple" id="activeBets">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Ganancia potencial</div>
+      <div class="stat-card__value stat-card__value--gold" id="potentialTotal">— BC</div>
+    </div>
+  </div>
+
+  <!-- Lista de partidos -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+      Partidos disponibles
+    </h2>
+    <button class="btn btn--ghost" onclick="loadMatches()" style="font-size:0.8rem;padding:6px 12px;">
+      ↺ Actualizar
+    </button>
+  </div>
+
+  <div id="matchList">
+    <div style="text-align:center;padding:3rem;color:var(--text-muted);">Cargando partidos...</div>
+  </div>
+
+  <!-- Historial de apuestas -->
+  <div style="margin-top:2.5rem;">
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">
+      Mis apuestas
+    </h2>
+    <div id="betHistory">
+      <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Modal de apuesta -->
+<div class="bet-modal-bg" id="betModal" onclick="closeBetModal(event)">
+  <div class="bet-modal">
+    <div style="font-size:1.2rem;font-weight:800;margin-bottom:0.25rem;" id="modalMatchTitle">—</div>
+    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;" id="modalMatchInfo">—</div>
+
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;margin-bottom:1.25rem;">
+      <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Tu selección</div>
+      <div style="font-weight:700;color:var(--purple-light);" id="modalSelection">—</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;">
+        Cuota: <strong style="color:var(--gold);" id="modalOdd">—</strong>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label class="form-label">Apuesta (BC)</label>
+      <div class="input-group">
+        <input class="form-input" type="number" id="modalBetAmount"
+               min="1" max="100000" value="10" oninput="updateModalPotential()">
+        <span class="input-group__suffix">BC</span>
+      </div>
+      <div class="multiplier-presets" style="margin-top:8px;">
+        <button onclick="setModalBet(10)">10</button>
+        <button onclick="setModalBet(50)">50</button>
+        <button onclick="setModalBet(100)">100</button>
+        <button onclick="setModalBet(500)">500</button>
+        <button onclick="setModalMaxBet()">MAX</button>
+      </div>
+    </div>
+
+    <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);
+                border-radius:var(--radius-md);padding:10px;text-align:center;margin-bottom:1.25rem;">
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:2px;">Ganancia potencial</div>
+      <div style="font-size:1.4rem;font-weight:900;color:var(--green-neon);" id="modalPotential">0.00 BC</div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn--ghost" onclick="document.getElementById('betModal').classList.remove('open')" style="flex:1;">
+        Cancelar
+      </button>
+      <button class="btn btn--orange" onclick="confirmBet()" style="flex:1;" id="confirmBetBtn">
+        Confirmar apuesta
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let currentLeague   = '';
+  let currentBalance  = 0;
+  let selectedMatch   = null;
+  let selectedSel     = null;
+  let selectedOdd     = 0;
+
+  // ── Carga inicial ─────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const [walletData, betsData] = await Promise.all([
+        VB.wallet.balance(),
+        VB.sports.history(),
+      ]);
+
+      currentBalance = parseFloat(walletData.wallet.balance) - parseFloat(walletData.wallet.lockedBalance || 0);
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+      document.getElementById('balanceDisplay').textContent = currentBalance.toFixed(2) + ' BC';
+
+      // Cuenta apuestas pendientes y ganancia potencial
+      const pending = betsData.bets.filter(b => b.status === 'PENDING');
+      document.getElementById('activeBets').textContent = pending.length;
+      const potentialTotal = pending.reduce((s, b) => s + parseFloat(b.potentialWin), 0);
+      document.getElementById('potentialTotal').textContent = potentialTotal.toFixed(2) + ' BC';
+
+      loadMatches();
+      renderBetHistory(betsData.bets.slice(0, 8));
+    } catch (err) {
+      showToast('Error al cargar datos', 'error');
+    }
+  }
+
+  // ── Tabs de liga ──────────────────────────────────────────────────────
+  function setLeague(league) {
+    currentLeague = league;
+    document.querySelectorAll('.league-tab').forEach(t => {
+      t.classList.toggle('active', t.textContent.includes(league) || (!league && t.textContent === 'Todos'));
+    });
+    loadMatches();
+  }
+
+  // ── Carga partidos ────────────────────────────────────────────────────
+  async function loadMatches() {
+    const container = document.getElementById('matchList');
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando...</div>';
+
+    try {
+      const data = await VB.sports.matches(currentLeague, 'UPCOMING');
+
+      if (!data.matches.length) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
+            No hay partidos disponibles por ahora.
+            <br><small style="font-size:0.8rem;margin-top:8px;display:block;">El admin publicará partidos próximamente</small>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = data.matches.map(m => `
+        <div class="match-card" id="match-${m.id}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;
+                          letter-spacing:1px;margin-bottom:6px;">${m.league}</div>
+              <div style="font-size:1.1rem;font-weight:700;">
+                ${m.teamHome} <span style="color:var(--text-muted);font-size:0.9rem;">vs</span> ${m.teamAway}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem;color:var(--text-muted);">Inicia en</div>
+              <div style="font-weight:600;color:var(--gold);font-size:0.9rem;">${timeUntil(m.startsAt)}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${formatDate(m.startsAt)}</div>
+            </div>
+          </div>
+
+          <div class="odds-row">
+            <div class="odd-btn" onclick="openBetModal('${m.id}', 'HOME', ${m.oddHome}, '${m.teamHome}', '${m.teamAway}', '${m.league}', '${m.startsAt}')">
+              <div class="odd-label">Local</div>
+              <div class="odd-value">${parseFloat(m.oddHome).toFixed(2)}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${m.teamHome}</div>
+            </div>
+            <div class="odd-btn" onclick="openBetModal('${m.id}', 'DRAW', ${m.oddDraw}, '${m.teamHome}', '${m.teamAway}', '${m.league}', '${m.startsAt}')">
+              <div class="odd-label">Empate</div>
+              <div class="odd-value">${parseFloat(m.oddDraw).toFixed(2)}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">X</div>
+            </div>
+            <div class="odd-btn" onclick="openBetModal('${m.id}', 'AWAY', ${m.oddAway}, '${m.teamHome}', '${m.teamAway}', '${m.league}', '${m.startsAt}')">
+              <div class="odd-label">Visita</div>
+              <div class="odd-value">${parseFloat(m.oddAway).toFixed(2)}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${m.teamAway}</div>
+            </div>
+          </div>
+
+          <div style="text-align:right;margin-top:8px;">
+            <button class="btn btn--ghost"
+              onclick="window.location.href='./p2p/create-p2p.html?matchId=${m.id}&home=${encodeURIComponent(m.teamHome)}&away=${encodeURIComponent(m.teamAway)}'"
+              style="font-size:0.78rem;padding:4px 12px;">
+              👥 Apostar con amigos
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);">Error al cargar partidos</div>`;
+    }
+  }
+
+  // ── Modal de apuesta ──────────────────────────────────────────────────
+  function openBetModal(matchId, selection, odd, home, away, league, startsAt) {
+    selectedMatch = matchId;
+    selectedSel   = selection;
+    selectedOdd   = parseFloat(odd);
+
+    const labels = { HOME: home, DRAW: 'Empate (X)', AWAY: away };
+
+    document.getElementById('modalMatchTitle').textContent = `${home} vs ${away}`;
+    document.getElementById('modalMatchInfo').textContent  = `${league} · ${formatDate(startsAt)}`;
+    document.getElementById('modalSelection').textContent  = labels[selection];
+    document.getElementById('modalOdd').textContent        = selectedOdd.toFixed(2) + 'x';
+
+    document.getElementById('modalBetAmount').value = 10;
+    updateModalPotential();
+
+    document.getElementById('betModal').classList.add('open');
+  }
+
+  function closeBetModal(e) {
+    if (e.target === document.getElementById('betModal')) {
+      document.getElementById('betModal').classList.remove('open');
+    }
+  }
+
+  function updateModalPotential() {
+    const amount = parseFloat(document.getElementById('modalBetAmount').value) || 0;
+    document.getElementById('modalPotential').textContent =
+      (amount * selectedOdd).toFixed(2) + ' BC';
+  }
+
+  function setModalBet(n) {
+    document.getElementById('modalBetAmount').value = Math.min(n, currentBalance);
+    updateModalPotential();
+  }
+  function setModalMaxBet() { setModalBet(Math.min(currentBalance, 100000)); }
+
+  async function confirmBet() {
+    const amount = parseFloat(document.getElementById('modalBetAmount').value);
+    if (!amount || amount < 1) { showToast('Mínimo 1 BC', 'error'); return; }
+    if (amount > currentBalance) { showToast('BC insuficientes', 'error'); return; }
+
+    const btn = document.getElementById('confirmBetBtn');
+    btn.disabled = true; btn.textContent = 'Procesando...';
+
+    try {
+      const data = await VB.sports.placeBet({
+        matchId:   selectedMatch,
+        selection: selectedSel,
+        amount,
+      });
+
+      document.getElementById('betModal').classList.remove('open');
+      showToast(`Apuesta registrada. Ganancia potencial: ${data.bet.potentialWin} BC 🎉`, 'success');
+
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+      document.getElementById('balanceDisplay').textContent = currentBalance.toFixed(2) + ' BC';
+
+      // Recarga historial
+      const betsData = await VB.sports.history();
+      renderBetHistory(betsData.bets.slice(0, 8));
+
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Confirmar apuesta';
+    }
+  }
+
+  // ── Historial de apuestas ─────────────────────────────────────────────
+  function renderBetHistory(bets) {
+    const container = document.getElementById('betHistory');
+
+    if (!bets.length) {
+      container.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+        Aún no hiciste apuestas deportivas
+      </div>`;
+      return;
+    }
+
+    const statusBadge = s => {
+      const map = {
+        PENDING:  '<span class="badge badge--pending">Pendiente</span>',
+        WON:      '<span class="badge badge--win">Ganada</span>',
+        LOST:     '<span class="badge badge--loss">Perdida</span>',
+        REFUNDED: '<span class="badge">Reembolsada</span>',
+      };
+      return map[s] || s;
+    };
+
+    const selLabel = s => ({ HOME: 'Local', DRAW: 'Empate', AWAY: 'Visita' }[s] || s);
+
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Partido</th>
+              <th>Selección</th>
+              <th>Apuesta</th>
+              <th>Cuota</th>
+              <th>Pot. ganancia</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bets.map(b => `
+              <tr>
+                <td>
+                  <div style="font-weight:600;">${b.match.teamHome} vs ${b.match.teamAway}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">${b.match.league}</div>
+                </td>
+                <td>${selLabel(b.selection)}</td>
+                <td>${parseFloat(b.amount).toFixed(2)} BC</td>
+                <td style="color:var(--gold);">${parseFloat(b.oddAtBet).toFixed(2)}x</td>
+                <td style="color:var(--green-neon);">${parseFloat(b.potentialWin).toFixed(2)} BC</td>
+                <td>${statusBadge(b.status)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  init();
+</script>
+</body>
+</html>

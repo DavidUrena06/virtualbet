@@ -1,104 +1,102 @@
-// frontend/js/api.js
-// Cliente HTTP del frontend — maneja JWT, errores y base URL automáticamente
-// Importar este archivo en todas las páginas antes de usar fetch
+// frontend/js/api.js — VirtualBet v2
+// Moneda: BetCoins (BC)
 
 const API_BASE = 'https://virtualbet.onrender.com/api';
-// En desarrollo local: const API_BASE = 'http://localhost:3000/api';
+// En local: const API_BASE = 'http://localhost:3000/api';
 
-// ─── Manejo de sesión local ───────────────────────────────────────────────────
+// ── Auth local ────────────────────────────────────────────────────────────
 const Auth = {
-  getToken:  ()      => localStorage.getItem('vb_token'),
-  getUser:   ()      => JSON.parse(localStorage.getItem('vb_user') || 'null'),
-  setSession: (token, user) => {
-    localStorage.setItem('vb_token', token);
-    localStorage.setItem('vb_user', JSON.stringify(user));
-  },
-  clear: () => {
-    localStorage.removeItem('vb_token');
-    localStorage.removeItem('vb_user');
-  },
-  isLoggedIn: ()     => !!localStorage.getItem('vb_token'),
-  isAdmin:    ()     => Auth.getUser()?.role === 'ADMIN',
+  getToken:   ()        => localStorage.getItem('vb_token'),
+  getUser:    ()        => JSON.parse(localStorage.getItem('vb_user') || 'null'),
+  setSession: (t, u)   => { localStorage.setItem('vb_token', t); localStorage.setItem('vb_user', JSON.stringify(u)); },
+  clear:      ()        => { localStorage.removeItem('vb_token'); localStorage.removeItem('vb_user'); },
+  isLoggedIn: ()        => !!localStorage.getItem('vb_token'),
+  isAdmin:    ()        => Auth.getUser()?.role === 'ADMIN',
 };
 
-// ─── Request helper base ──────────────────────────────────────────────────────
+// ── Fetch base ────────────────────────────────────────────────────────────
 async function request(method, endpoint, body = null) {
   const headers = { 'Content-Type': 'application/json' };
-
   const token = Auth.getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
 
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    const res  = await fetch(`${API_BASE}${endpoint}`, opts);
     const data = await res.json();
 
-    // Sesión expirada → redirige al login
-    if (res.status === 401) {
-      Auth.clear();
-      window.location.href = '/pages/login.html';
-      return;
-    }
-
-    if (!res.ok) {
-      throw new Error(data.error || data.errors?.[0]?.msg || 'Error desconocido');
-    }
+    if (res.status === 401) { Auth.clear(); window.location.href = '/pages/login.html'; return; }
+    if (!res.ok) throw new Error(data.error || data.errors?.[0]?.msg || 'Error desconocido');
 
     return data;
   } catch (err) {
-    if (err instanceof TypeError) {
-      throw new Error('No se pudo conectar con el servidor. Verificá tu conexión.');
-    }
+    if (err instanceof TypeError) throw new Error('No se pudo conectar con el servidor');
     throw err;
   }
 }
 
 const api = {
-  get:    (endpoint)       => request('GET',    endpoint),
-  post:   (endpoint, body) => request('POST',   endpoint, body),
-  put:    (endpoint, body) => request('PUT',    endpoint, body),
-  patch:  (endpoint, body) => request('PATCH',  endpoint, body),
-  delete: (endpoint)       => request('DELETE', endpoint),
+  get:    (ep)      => request('GET',    ep),
+  post:   (ep, b)   => request('POST',   ep, b),
+  put:    (ep, b)   => request('PUT',    ep, b),
+  patch:  (ep, b)   => request('PATCH',  ep, b),
+  delete: (ep)      => request('DELETE', ep),
 };
 
-// ─── Endpoints organizados ────────────────────────────────────────────────────
+// ── Todos los endpoints organizados ──────────────────────────────────────
 const VB = {
-  // Auth
   auth: {
-    register: (data)  => api.post('/auth/register', data),
-    login:    (data)  => api.post('/auth/login',    data),
-    me:       ()      => api.get('/auth/me'),
+    register: (d) => api.post('/auth/register', d),
+    login:    (d) => api.post('/auth/login',    d),
+    me:       ()  => api.get('/auth/me'),
   },
 
-  // Wallet
   wallet: {
-    balance:      ()       => api.get('/wallet/balance'),
-    transactions: (page=1) => api.get(`/wallet/transactions?page=${page}`),
+    balance:      ()        => api.get('/wallet/balance'),
+    transactions: (page=1)  => api.get(`/wallet/transactions?page=${page}`),
   },
 
-  // Juegos
   games: {
-    dice:          (data)   => api.post('/games/dice',          data),
-    coinflip:      (data)   => api.post('/games/coinflip',      data),
-    crashStart:    (data)   => api.post('/games/crash/start',   data),
-    crashCashout:  (data)   => api.post('/games/crash/cashout', data),
-    history:       (page=1) => api.get(`/games/history?page=${page}`),
-    minesStart:    (data)   => api.post('/games/mines/start',   data),
-    minesReveal:   (data)   => api.post('/games/mines/reveal',  data),
-    minesCashout:  (data)   => api.post('/games/mines/cashout', data),
-    plinko:        (data)   => api.post('/games/plinko',        data),
-    roulette:      (data)   => api.post('/games/roulette',      data),
-
+    dice:          (d) => api.post('/games/dice',          d),
+    coinflip:      (d) => api.post('/games/coinflip',      d),
+    crashStart:    (d) => api.post('/games/crash/start',   d),
+    crashCashout:  (d) => api.post('/games/crash/cashout', d),
+    minesStart:    (d) => api.post('/games/mines/start',   d),
+    minesReveal:   (d) => api.post('/games/mines/reveal',  d),
+    minesCashout:  (d) => api.post('/games/mines/cashout', d),
+    plinko:        (d) => api.post('/games/plinko',        d),
+    roulette:      (d) => api.post('/games/roulette',      d),
+    history:       (page=1, type='') =>
+      api.get(`/games/history?page=${page}${type ? '&gameType='+type : ''}`),
   },
 
-  // Apuestas deportivas
-  betting: {
-    matches:    (league='', status='') =>
-      api.get(`/betting/matches?league=${league}&status=${status}`),
-    placeBet:   (data)   => api.post('/betting/place',   data),
-    history:    (page=1) => api.get(`/betting/history?page=${page}`),
+  // Sportsbook (apuestas vs la casa)
+  sports: {
+    matches:    (league='', status='UPCOMING') =>
+      api.get(`/sports/matches?league=${league}&status=${status}`),
+    match:      (id)  => api.get(`/sports/matches/${id}`),
+    placeBet:   (d)   => api.post('/sports/bet', d),
+    history:    (p=1) => api.get(`/sports/history?page=${p}`),
+  },
+
+  // Sistema de amigos
+  friends: {
+    search:         (q)    => api.get(`/friends/search?q=${encodeURIComponent(q)}`),
+    list:           ()     => api.get('/friends'),
+    requests:       ()     => api.get('/friends/requests'),
+    sendRequest:    (d)    => api.post('/friends/request',  d),
+    respondRequest: (d)    => api.post('/friends/respond',  d),
+    remove:         (d)    => api.post('/friends/remove',   d),
+  },
+
+  // Apuestas P2P
+  p2p: {
+    create:  (d)    => api.post('/p2p/create',  d),
+    join:    (d)    => api.post('/p2p/join',     d),
+    cancel:  (d)    => api.post('/p2p/cancel',   d),
+    get:     (id)   => api.get(`/p2p/${id}`),
+    myBets:  (s='') => api.get(`/p2p/my?status=${s}`),
   },
 
   // Perfil
@@ -106,59 +104,58 @@ const VB = {
     profile: () => api.get('/user/profile'),
   },
 
-  // Admin (solo rol ADMIN)
+  // Notificaciones
+  notifications: {
+    list:    ()  => api.get('/notifications'),
+    readAll: ()  => api.post('/notifications/read-all'),
+  },
+
+  // Admin
   admin: {
-    users:        (page=1, search='') =>
-      api.get(`/admin/users?page=${page}&search=${search}`),
-    stats:        ()       => api.get('/admin/stats'),
-    logs:         (page=1) => api.get(`/admin/logs?page=${page}`),
-    giveCoins:    (data)   => api.post('/admin/coins/give',      data),
-    giveCoinsAll: (data)   => api.post('/admin/coins/give-all',  data),
-    removeCoins:  (data)   => api.post('/admin/coins/remove',    data),
-    banUser:      (data)   => api.post('/admin/ban',             data),
-    unbanUser:    (data)   => api.post('/admin/unban',           data),
-    createMatch:  (data)   => api.post('/admin/matches',         data),
-    resolveMatch: (data)   => api.post('/admin/matches/resolve', data),
+    users:          (p=1, q='') => api.get(`/admin/users?page=${p}&search=${q}`),
+    stats:          ()          => api.get('/admin/stats'),
+    logs:           (p=1)       => api.get(`/admin/logs?page=${p}`),
+    giveBetCoins:   (d)         => api.post('/admin/coins/give',      d),
+    giveBetCoinsAll:(d)         => api.post('/admin/coins/give-all',  d),
+    removeBetCoins: (d)         => api.post('/admin/coins/remove',    d),
+    banUser:        (d)         => api.post('/admin/ban',             d),
+    unbanUser:      (d)         => api.post('/admin/unban',           d),
+    createMatch:    (d)         => api.post('/admin/matches',         d),
+    resolveMatch:   (d)         => api.post('/admin/matches/resolve', d),
   },
 };
 
-// ─── Guard de rutas: redirige si no está logueado ────────────────────────────
-function requireLogin() {
-  if (!Auth.isLoggedIn()) {
-    window.location.href = '/pages/login.html';
-  }
-}
+// ── Guards ────────────────────────────────────────────────────────────────
+function requireLogin()     { if (!Auth.isLoggedIn()) window.location.href = '/pages/login.html'; }
+function requireAdminRole() { if (!Auth.isLoggedIn() || !Auth.isAdmin()) window.location.href = '/pages/login.html'; }
 
-function requireAdminRole() {
-  if (!Auth.isLoggedIn() || !Auth.isAdmin()) {
-    window.location.href = '/pages/login.html';
-  }
-}
-
-// ─── Helpers UI ───────────────────────────────────────────────────────────────
+// ── Helpers UI ────────────────────────────────────────────────────────────
 function showToast(message, type = 'info') {
-  // type: 'success' | 'error' | 'info'
-  const toast = document.createElement('div');
-  toast.className = `vb-toast vb-toast--${type}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  // Animación
-  requestAnimationFrame(() => toast.classList.add('vb-toast--visible'));
-
+  const t = document.createElement('div');
+  t.className = `vb-toast vb-toast--${type}`;
+  t.textContent = message;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('vb-toast--visible'));
   setTimeout(() => {
-    toast.classList.remove('vb-toast--visible');
-    setTimeout(() => toast.remove(), 400);
+    t.classList.remove('vb-toast--visible');
+    setTimeout(() => t.remove(), 400);
   }, 3000);
 }
 
-function formatCoins(amount) {
+// Formatea BetCoins con símbolo
+function formatBC(amount) {
   return parseFloat(amount).toLocaleString('es-CR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }) + ' 🪙';
+  }) + ' BC';
 }
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleString('es-CR');
+function formatDate(d) { return new Date(d).toLocaleString('es-CR'); }
+
+function timeUntil(dateStr) {
+  const diff = new Date(dateStr) - new Date();
+  if (diff <= 0) return 'Iniciando';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }

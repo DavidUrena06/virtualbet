@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Amigos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .friend-card {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:1rem 1.25rem;
+      margin-bottom:0.75rem; transition:all 0.15s;
+    }
+    .friend-card:hover { border-color:var(--border-hover); }
+    .friend-avatar {
+      width:44px; height:44px; border-radius:50%;
+      background:var(--bg-secondary); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.4rem; flex-shrink:0;
+    }
+    .tabs {
+      display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:1.5rem;
+    }
+    .tab-btn {
+      padding:10px 20px; font-size:0.9rem; font-weight:600;
+      color:var(--text-secondary); cursor:pointer;
+      border-bottom:2px solid transparent; transition:all 0.15s;
+      background:none; border-top:none; border-left:none; border-right:none;
+    }
+    .tab-btn.active { color:var(--purple-light); border-bottom-color:var(--purple-light); }
+    .tab-btn:hover  { color:var(--text-primary); }
+
+    .search-wrap {
+      position:relative; margin-bottom:1.5rem;
+    }
+    .search-wrap input { padding-right:3rem; }
+    .search-wrap .search-icon {
+      position:absolute; right:12px; top:50%; transform:translateY(-50%);
+      color:var(--text-muted); pointer-events:none;
+    }
+    .search-results {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); overflow:hidden; margin-top:-12px;
+    }
+    .search-result-item {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px; border-bottom:1px solid var(--border);
+      transition:background 0.1s;
+    }
+    .search-result-item:last-child { border-bottom:none; }
+    .search-result-item:hover { background:var(--bg-card-hover); }
+
+    .badge-pending { background:rgba(245,158,11,0.15); color:var(--gold); }
+    .badge-friends { background:rgba(0,255,136,0.12); color:var(--green-neon); }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="./dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">👥 Amigos</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span> BC</div>
+</nav>
+
+<main class="container page">
+
+  <!-- Buscar usuarios -->
+  <div class="search-wrap">
+    <input class="form-input" type="text" id="searchInput"
+           placeholder="Buscar usuarios por nombre o email..."
+           oninput="onSearch(this.value)">
+    <span class="search-icon">🔍</span>
+  </div>
+  <div id="searchResults" style="display:none;" class="search-results"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('friends')">
+      Mis amigos <span id="friendsCount" style="color:var(--text-muted);font-weight:400;"></span>
+    </button>
+    <button class="tab-btn" onclick="showTab('requests')">
+      Solicitudes <span id="requestsBadge" style="background:var(--red-accent);color:#fff;
+        border-radius:99px;padding:1px 7px;font-size:0.75rem;margin-left:4px;display:none;" id="reqBadge"></span>
+    </button>
+  </div>
+
+  <!-- Contenido de tabs -->
+  <div id="tabFriends">
+    <div id="friendsList">
+      <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando amigos...</div>
+    </div>
+  </div>
+
+  <div id="tabRequests" style="display:none;">
+    <div id="requestsList">
+      <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando solicitudes...</div>
+    </div>
+  </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let searchTimer = null;
+
+  async function loadBalance() {
+    try {
+      const d = await VB.wallet.balance();
+      const bal = parseFloat(d.wallet.balance) - parseFloat(d.wallet.lockedBalance || 0);
+      document.getElementById('navBalance').textContent =
+        bal.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+    } catch(e) {}
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  function showTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && tab === 'friends') || (i === 1 && tab === 'requests'));
+    });
+    document.getElementById('tabFriends').style.display  = tab === 'friends'  ? 'block' : 'none';
+    document.getElementById('tabRequests').style.display = tab === 'requests' ? 'block' : 'none';
+
+    if (tab === 'friends')  loadFriends();
+    if (tab === 'requests') loadRequests();
+  }
+
+  // ── Buscar usuarios ───────────────────────────────────────────────────
+  function onSearch(val) {
+    clearTimeout(searchTimer);
+    const results = document.getElementById('searchResults');
+
+    if (val.length < 2) { results.style.display = 'none'; return; }
+
+    searchTimer = setTimeout(async () => {
+      try {
+        const data = await VB.friends.search(val);
+        renderSearchResults(data.users);
+      } catch (err) {
+        results.style.display = 'none';
+      }
+    }, 350);
+  }
+
+  function renderSearchResults(users) {
+    const container = document.getElementById('searchResults');
+
+    if (!users.length) {
+      container.style.display = 'block';
+      container.innerHTML = '<div style="padding:12px 16px;color:var(--text-muted);font-size:0.9rem;">No se encontraron usuarios</div>';
+      return;
+    }
+
+    const actionBtn = (u) => {
+      if (u.relationStatus === 'friends') {
+        return `<span class="badge badge-friends" style="padding:4px 10px;border-radius:99px;font-size:0.75rem;">Ya amigos</span>`;
+      }
+      if (u.relationStatus === 'pending_sent') {
+        return `<span class="badge badge-pending" style="padding:4px 10px;border-radius:99px;font-size:0.75rem;">Solicitud enviada</span>`;
+      }
+      if (u.relationStatus === 'pending_received') {
+        return `<button class="btn btn--green" style="padding:4px 12px;font-size:0.8rem;"
+          onclick="respondRequest('${u.friendshipId}', 'accept')">Aceptar</button>`;
+      }
+      return `<button class="btn btn--primary" style="padding:4px 12px;font-size:0.8rem;"
+        onclick="sendRequest('${u.id}', this)">+ Agregar</button>`;
+    };
+
+    container.style.display = 'block';
+    container.innerHTML = users.map(u => `
+      <div class="search-result-item">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="friend-avatar" style="width:36px;height:36px;font-size:1.1rem;">${u.avatarEmoji}</div>
+          <div>
+            <div style="font-weight:600;">${u.username}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Miembro desde ${new Date(u.createdAt).toLocaleDateString('es-CR')}</div>
+          </div>
+        </div>
+        ${actionBtn(u)}
+      </div>
+    `).join('');
+  }
+
+  // ── Enviar solicitud ──────────────────────────────────────────────────
+  async function sendRequest(addresseeId, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      const data = await VB.friends.sendRequest({ addresseeId });
+      showToast(data.message, 'success');
+      btn.textContent = 'Enviada';
+      btn.className = 'badge badge-pending';
+      btn.style.cssText = 'padding:4px 10px;border-radius:99px;font-size:0.75rem;border:none;';
+    } catch (err) {
+      showToast(err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '+ Agregar';
+    }
+  }
+
+  // ── Cargar amigos ─────────────────────────────────────────────────────
+  async function loadFriends() {
+    const container = document.getElementById('friendsList');
+    try {
+      const data = await VB.friends.list();
+      const { friends } = data;
+
+      document.getElementById('friendsCount').textContent = `(${friends.length})`;
+
+      if (!friends.length) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:2rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">👤</div>
+            <div style="color:var(--text-secondary);">Aún no tenés amigos en VirtualBet</div>
+            <div style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">Buscalos por nombre arriba</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = friends.map(f => `
+        <div class="friend-card">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="friend-avatar">${f.friend.avatarEmoji}</div>
+            <div>
+              <div style="font-weight:700;">${f.friend.username}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted);">
+                Amigos desde ${new Date(f.since).toLocaleDateString('es-CR')}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn--primary" style="font-size:0.8rem;padding:6px 14px;"
+              onclick="window.location.href='./p2p/create-p2p.html?friendId=${f.friend.id}&friendName=${encodeURIComponent(f.friend.username)}'">
+              🎲 Apostar
+            </button>
+            <button class="btn btn--ghost" style="font-size:0.8rem;padding:6px 12px;color:var(--red-accent);"
+              onclick="removeFriend('${f.friendshipId}', '${f.friend.username}')">
+              ✕
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = '<div class="card" style="color:var(--text-muted);text-align:center;">Error al cargar amigos</div>';
+    }
+  }
+
+  // ── Solicitudes pendientes ────────────────────────────────────────────
+  async function loadRequests() {
+    const container = document.getElementById('requestsList');
+    try {
+      const data = await VB.friends.requests();
+      const { requests } = data;
+
+      // Actualiza badge
+      const badge = document.getElementById('reqBadge');
+      if (requests.length > 0) {
+        badge.textContent = requests.length;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      if (!requests.length) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
+            No tenés solicitudes pendientes
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = requests.map(r => `
+        <div class="friend-card">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="friend-avatar">${r.requester.avatarEmoji}</div>
+            <div>
+              <div style="font-weight:700;">${r.requester.username}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted);">
+                ${formatDate(r.createdAt)}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn--green" style="padding:6px 16px;font-size:0.85rem;"
+              onclick="respondRequest('${r.id}', 'accept', this)">
+              ✓ Aceptar
+            </button>
+            <button class="btn btn--ghost" style="padding:6px 12px;font-size:0.85rem;"
+              onclick="respondRequest('${r.id}', 'reject', this)">
+              ✕
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = '<div class="card" style="color:var(--text-muted);text-align:center;">Error al cargar solicitudes</div>';
+    }
+  }
+
+  async function respondRequest(friendshipId, action, btn) {
+    if (btn) btn.disabled = true;
+    try {
+      const data = await VB.friends.respondRequest({ friendshipId, action });
+      showToast(data.message, 'success');
+      loadRequests();
+      if (action === 'accept') loadFriends();
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function removeFriend(friendshipId, username) {
+    if (!confirm(`¿Eliminar a ${username} de tus amigos?`)) return;
+    try {
+      await VB.friends.remove({ friendshipId });
+      showToast(`${username} eliminado de tus amigos`, 'info');
+      loadFriends();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── Cierra resultados al hacer click afuera ───────────────────────────
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrap') && !e.target.closest('.search-results')) {
+      document.getElementById('searchResults').style.display = 'none';
+    }
+  });
+
+  loadBalance();
+  loadFriends();
+  loadRequests(); // Para el badge inicial
+</script>
+</body>
+</html>
