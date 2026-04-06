@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Historial</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 10px 22px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+    }
+    .tab-btn.active { color: var(--purple-light); border-bottom-color: var(--purple-light); }
+    .tab-btn:hover  { color: var(--text-primary); }
+
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .filter-chip {
+      padding: 4px 14px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-chip.active {
+      background: rgba(124,58,237,0.15);
+      border-color: var(--purple);
+      color: var(--purple-light);
+    }
+
+    .result-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; flex-shrink: 0;
+    }
+    .result-icon.win  { background: rgba(0,255,136,0.12); }
+    .result-icon.loss { background: rgba(239,68,68,0.12); }
+    .result-icon.pending { background: rgba(245,158,11,0.12); }
+
+    /* Paginación */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="./dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">📋 Historial</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span> BC</div>
+</nav>
+
+<main class="container page">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('games')">🎲 Casino</button>
+    <button class="tab-btn" onclick="switchTab('sports')">⚽ Deportes</button>
+    <button class="tab-btn" onclick="switchTab('p2p')">🤝 P2P</button>
+    <button class="tab-btn" onclick="switchTab('wallet')">🪙 BetCoins</button>
+  </div>
+
+  <!-- ════ TAB: CASINO ════ -->
+  <div id="tab-games" class="tab-content">
+    <div class="filter-row">
+      <span style="font-size:0.8rem;color:var(--text-muted);">Juego:</span>
+      <div class="filter-chip active" onclick="setGameFilter('')">Todos</div>
+      <div class="filter-chip" onclick="setGameFilter('DICE')">🎲 Dice</div>
+      <div class="filter-chip" onclick="setGameFilter('COINFLIP')">🪙 Coinflip</div>
+      <div class="filter-chip" onclick="setGameFilter('CRASH')">📈 Crash</div>
+      <div class="filter-chip" onclick="setGameFilter('MINES')">💣 Mines</div>
+      <div class="filter-chip" onclick="setGameFilter('PLINKO')">🔵 Plinko</div>
+      <div class="filter-chip" onclick="setGameFilter('ROULETTE')">🎡 Ruleta</div>
+    </div>
+
+    <div class="table-wrapper">
+      <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+        <thead style="background:var(--bg-secondary);">
+          <tr>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Juego</th>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Apuesta</th>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Multiplicador</th>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Pago</th>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Resultado</th>
+            <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="gamesBody">
+          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="gamesPagination">
+      <span id="gamesInfo">—</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn--ghost" onclick="loadGames(gamesPage-1)">← Ant.</button>
+        <button class="btn btn--ghost" onclick="loadGames(gamesPage+1)">Sig. →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ TAB: DEPORTES ════ -->
+  <div id="tab-sports" class="tab-content" style="display:none;">
+    <div class="filter-row">
+      <span style="font-size:0.8rem;color:var(--text-muted);">Estado:</span>
+      <div class="filter-chip active" onclick="setSportFilter('')">Todas</div>
+      <div class="filter-chip" onclick="setSportFilter('PENDING')">Pendientes</div>
+      <div class="filter-chip" onclick="setSportFilter('WON')">Ganadas</div>
+      <div class="filter-chip" onclick="setSportFilter('LOST')">Perdidas</div>
+    </div>
+
+    <div id="sportsContent">
+      <div style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</div>
+    </div>
+    <div class="pagination" id="sportsPagination">
+      <span id="sportsInfo">—</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn--ghost" onclick="loadSports(sportsPage-1)">← Ant.</button>
+        <button class="btn btn--ghost" onclick="loadSports(sportsPage+1)">Sig. →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ TAB: P2P ════ -->
+  <div id="tab-p2p" class="tab-content" style="display:none;">
+    <div class="filter-row">
+      <span style="font-size:0.8rem;color:var(--text-muted);">Estado:</span>
+      <div class="filter-chip active" onclick="setP2PFilter('')">Todas</div>
+      <div class="filter-chip" onclick="setP2PFilter('OPEN')">Abiertas</div>
+      <div class="filter-chip" onclick="setP2PFilter('LOCKED')">Bloqueadas</div>
+      <div class="filter-chip" onclick="setP2PFilter('RESOLVED')">Resueltas</div>
+    </div>
+
+    <div id="p2pContent">
+      <div style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ════ TAB: BETCOINS ════ -->
+  <div id="tab-wallet" class="tab-content" style="display:none;">
+    <div id="walletContent">
+      <div style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</div>
+    </div>
+    <div class="pagination" id="walletPagination">
+      <span id="walletInfo">—</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn--ghost" onclick="loadWallet(walletPage-1)">← Ant.</button>
+        <button class="btn btn--ghost" onclick="loadWallet(walletPage+1)">Sig. →</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script>
+  requireLogin();
+
+  let gamesPage  = 1, gamesFilter  = '';
+  let sportsPage = 1, sportsFilter = '';
+  let p2pFilter  = '';
+  let walletPage = 1;
+
+  // Carga balance en navbar
+  VB.wallet.balance().then(d => {
+    const bal = parseFloat(d.wallet.balance) - parseFloat(d.wallet.lockedBalance || 0);
+    document.getElementById('navBalance').textContent =
+      bal.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+  }).catch(() => {});
+
+  // ── Navegación de tabs ─────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+    document.getElementById('tab-' + tab).style.display = 'block';
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      if ((tab === 'games'  && b.textContent.includes('Casino')) ||
+          (tab === 'sports' && b.textContent.includes('Deportes')) ||
+          (tab === 'p2p'    && b.textContent.includes('P2P')) ||
+          (tab === 'wallet' && b.textContent.includes('BetCoins'))) {
+        b.classList.add('active');
+      }
+    });
+
+    const loaders = { games: () => loadGames(1), sports: () => loadSports(1), p2p: loadP2P, wallet: () => loadWallet(1) };
+    loaders[tab]?.();
+  }
+
+  function setFilterChip(parentId, value, loader) {
+    document.querySelectorAll(`#${parentId} .filter-chip`).forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    loader(value);
+  }
+
+  function setGameFilter(f)  { gamesFilter  = f; document.querySelectorAll('#tab-games .filter-chip').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); loadGames(1); }
+  function setSportFilter(f) { sportsFilter = f; document.querySelectorAll('#tab-sports .filter-chip').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); loadSports(1); }
+  function setP2PFilter(f)   { p2pFilter    = f; document.querySelectorAll('#tab-p2p .filter-chip').forEach(c => c.classList.remove('active')); event.target.classList.add('active'); loadP2P(); }
+
+  // ── CASINO ──────────────────────────────────────────────────────────────
+  const GAME_ICONS = { DICE:'🎲', COINFLIP:'🪙', CRASH:'📈', MINES:'💣', PLINKO:'🔵', ROULETTE:'🎡', PUMP:'⬆️' };
+
+  async function loadGames(page = 1) {
+    if (page < 1) return;
+    gamesPage = page;
+    const tbody = document.getElementById('gamesBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+
+    try {
+      const { history, pagination } = await VB.games.history(page, gamesFilter);
+
+      document.getElementById('gamesInfo').textContent =
+        `${pagination.total} partidas · página ${page}/${pagination.pages}`;
+
+      if (!history.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Sin partidas registradas</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = history.map(h => {
+        const won = h.result === 'WIN';
+        const bet = parseFloat(h.betAmount);
+        const pay = parseFloat(h.payout);
+        const net = won ? pay - bet : -bet;
+
+        return `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="result-icon ${won ? 'win' : 'loss'}">${won ? '✓' : '✗'}</div>
+                <div>
+                  <div style="font-weight:600;">${GAME_ICONS[h.gameType] || '🎰'} ${h.gameType}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-weight:600;">${bet.toFixed(2)} BC</td>
+            <td style="color:${won ? 'var(--gold)' : 'var(--text-muted)'};">
+              ${won ? parseFloat(h.multiplier).toFixed(4) + 'x' : '—'}
+            </td>
+            <td style="color:var(--green-neon);">${won ? pay.toFixed(2) + ' BC' : '—'}</td>
+            <td>
+              <span style="font-weight:700;color:${net >= 0 ? 'var(--green-neon)' : 'var(--red-accent)'};">
+                ${net >= 0 ? '+' : ''}${net.toFixed(2)} BC
+              </span>
+            </td>
+            <td style="color:var(--text-muted);font-size:0.8rem;">${new Date(h.playedAt).toLocaleString('es-CR')}</td>
+          </tr>`;
+      }).join('');
+
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Error al cargar</td></tr>';
+    }
+  }
+
+  // ── DEPORTES ───────────────────────────────────────────────────────────
+  const SEL_LABEL = { HOME: 'Local', DRAW: 'Empate', AWAY: 'Visita' };
+  const BET_STATUS_COLORS = { PENDING: 'var(--gold)', WON: 'var(--green-neon)', LOST: 'var(--red-accent)', REFUNDED: 'var(--text-muted)' };
+
+  async function loadSports(page = 1) {
+    if (page < 1) return;
+    sportsPage = page;
+    const el = document.getElementById('sportsContent');
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</div>';
+
+    try {
+      const { bets, pagination } = await VB.sports.history(page);
+      const filtered = sportsFilter ? bets.filter(b => b.status === sportsFilter) : bets;
+
+      document.getElementById('sportsInfo').textContent =
+        `${pagination.total} apuestas · página ${page}/${pagination.pages}`;
+
+      if (!filtered.length) {
+        el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">Sin apuestas en esta categoría</div>';
+        return;
+      }
+
+      el.innerHTML = filtered.map(b => {
+        const won  = b.status === 'WON';
+        const lost = b.status === 'LOST';
+        const net  = won ? parseFloat(b.potentialWin) - parseFloat(b.amount) : lost ? -parseFloat(b.amount) : 0;
+
+        return `
+          <div class="card" style="margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">${b.match?.league || '—'}</div>
+                <div style="font-weight:700;">${b.match?.teamHome || '?'} vs ${b.match?.teamAway || '?'}</div>
+                <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+                  <span style="background:rgba(124,58,237,0.1);color:var(--purple-light);
+                               padding:2px 8px;border-radius:99px;font-size:0.78rem;font-weight:600;">
+                    ${SEL_LABEL[b.selection] || b.selection}
+                  </span>
+                  <span style="font-size:0.82rem;color:var(--text-secondary);">
+                    ${parseFloat(b.amount).toFixed(2)} BC · cuota ${parseFloat(b.oddAtBet).toFixed(2)}x
+                  </span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge" style="color:${BET_STATUS_COLORS[b.status]};">
+                  ${{ PENDING:'⏳ Pendiente', WON:'✓ Ganada', LOST:'✗ Perdida', REFUNDED:'↩ Reembolso' }[b.status]}
+                </span>
+                ${b.status !== 'PENDING' ? `
+                  <div style="font-size:0.9rem;font-weight:700;margin-top:4px;
+                       color:${net >= 0 ? 'var(--green-neon)' : 'var(--red-accent)'};">
+                    ${net >= 0 ? '+' : ''}${net.toFixed(2)} BC
+                  </div>` : `
+                  <div style="font-size:0.82rem;color:var(--gold);margin-top:4px;">
+                    Pot: ${parseFloat(b.potentialWin).toFixed(2)} BC
+                  </div>`}
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+                  ${new Date(b.createdAt).toLocaleString('es-CR')}
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (err) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-muted);">Error al cargar</div>';
+    }
+  }
+
+  // ── P2P ──────────────────────────────────────────────────────────────
+  async function loadP2P() {
+    const el = document.getElementById('p2pContent');
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</div>';
+
+    try {
+      const { participations } = await VB.p2p.myBets(p2pFilter);
+
+      if (!participations.length) {
+        el.innerHTML = `
+          <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
+            Sin apuestas P2P en esta categoría
+          </div>`;
+        return;
+      }
+
+      const P2P_STATUS = { OPEN:'🟢 Abierta', LOCKED:'🟡 Bloqueada', RESOLVED:'✅ Resuelta', CANCELLED:'❌ Cancelada' };
+      const P2P_PART_STATUS = { ACTIVE:'En juego', WON:'Ganada', LOST:'Perdida', REFUNDED:'Reembolsada' };
+      const selLabel = s => ({ HOME:'Local', DRAW:'Empate', AWAY:'Visita' }[s] || s);
+
+      el.innerHTML = participations.map(p => {
+        const bet = p.privateBet;
+        const won = p.status === 'WON';
+        const payout = parseFloat(p.payout || 0);
+        const amount = parseFloat(p.amount);
+        const net = won ? payout - amount : p.status === 'LOST' ? -amount : 0;
+
+        return `
+          <div class="card" style="margin-bottom:0.75rem;cursor:pointer;"
+               onclick="window.location.href='./p2p.html'">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px;">${bet.title}</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                  ${bet.match?.teamHome} vs ${bet.match?.teamAway} · ${bet.match?.league}
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <span style="font-size:0.78rem;background:var(--bg-secondary);
+                               border-radius:99px;padding:2px 8px;color:var(--text-secondary);">
+                    ${selLabel(p.selection)}
+                  </span>
+                  <span style="font-size:0.78rem;color:var(--text-secondary);">
+                    ${amount.toFixed(2)} BC · pool ${parseFloat(bet.totalPool).toFixed(2)} BC
+                  </span>
+                  <span style="font-size:0.78rem;">${P2P_STATUS[bet.status] || bet.status}</span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:0.85rem;font-weight:600;color:${
+                  p.status === 'WON' ? 'var(--green-neon)' :
+                  p.status === 'LOST' ? 'var(--red-accent)' : 'var(--text-secondary)'};">
+                  ${P2P_PART_STATUS[p.status] || p.status}
+                </div>
+                ${net !== 0 ? `
+                  <div style="font-weight:700;color:${net > 0 ? 'var(--green-neon)' : 'var(--red-accent)'};">
+                    ${net > 0 ? '+' : ''}${net.toFixed(2)} BC
+                  </div>` : ''}
+                <div style="font-size:0.72rem;color:var(--text-muted);">
+                  ${new Date(p.joinedAt).toLocaleDateString('es-CR')}
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (err) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-muted);">Error al cargar</div>';
+    }
+  }
+
+  // ── BETCOINS / WALLET ─────────────────────────────────────────────────
+  const TX_LABELS = {
+    ADMIN_DEPOSIT:'🎁 Depósito admin', ADMIN_WITHDRAW:'📤 Retiro admin',
+    GAME_BET:'🎲 Apuesta casino', GAME_WIN:'🏆 Ganancia casino',
+    SPORT_BET:'⚽ Apuesta deportiva', SPORT_WIN:'🏆 Ganancia deportiva',
+    SPORT_REFUND:'↩️ Reembolso deporte', P2P_BET_LOCK:'🔒 P2P bloqueado',
+    P2P_BET_WIN:'🤝 Ganancia P2P', P2P_BET_REFUND:'↩️ Reembolso P2P',
+    P2P_COMMISSION:'💼 Comisión casa', SCHEDULED_BONUS:'⏰ Bono auto',
+  };
+
+  async function loadWallet(page = 1) {
+    if (page < 1) return;
+    walletPage = page;
+    const el = document.getElementById('walletContent');
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</div>';
+
+    try {
+      const { transactions, pagination } = await VB.wallet.transactions(page);
+
+      document.getElementById('walletInfo').textContent =
+        `${pagination.total} movimientos · página ${page}/${pagination.pages}`;
+
+      if (!transactions.length) {
+        el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;">Sin movimientos</div>';
+        return;
+      }
+
+      const POSITIVES = ['ADMIN_DEPOSIT','GAME_WIN','SPORT_WIN','P2P_BET_WIN','SPORT_REFUND','P2P_BET_REFUND','SCHEDULED_BONUS'];
+
+      el.innerHTML = transactions.map(tx => {
+        const isPos  = POSITIVES.includes(tx.type);
+        const amount = parseFloat(tx.amount).toFixed(2);
+        const color  = isPos ? 'var(--green-neon)' : 'var(--red-accent)';
+        const sign   = isPos ? '+' : '−';
+
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:50%;
+                          background:${isPos ? 'rgba(0,255,136,0.1)' : 'rgba(239,68,68,0.1)'};
+                          display:flex;align-items:center;justify-content:center;font-size:0.95rem;">
+                ${isPos ? '↑' : '↓'}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;">
+                  ${TX_LABELS[tx.type] || tx.type}
+                </div>
+                ${tx.note ? `<div style="font-size:0.75rem;color:var(--text-muted);">${tx.note}</div>` : ''}
+                <div style="font-size:0.72rem;color:var(--text-muted);">
+                  ${new Date(tx.createdAt).toLocaleString('es-CR')}
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700;color:${color};">${sign}${amount} BC</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">
+                Saldo: ${parseFloat(tx.balanceAfter).toFixed(2)} BC
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+    } catch (err) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-muted);">Error al cargar</div>';
+    }
+  }
+
+  // Init
+  loadGames(1);
+</script>
+</body>
+</html>

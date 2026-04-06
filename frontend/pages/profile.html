@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Mi perfil</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .profile-hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(124,58,237,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .avatar-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; cursor: pointer;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .avatar-circle:hover {
+      border-color: var(--purple);
+      box-shadow: 0 0 16px rgba(124,58,237,0.3);
+      transform: scale(1.05);
+    }
+
+    /* Selector de emojis */
+    .emoji-picker {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      position: absolute;
+      top: 110px; left: 2rem;
+      z-index: 100;
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 220px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .emoji-picker.open { display: flex; }
+    .emoji-opt {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; cursor: pointer;
+      background: var(--bg-secondary);
+      transition: all 0.1s;
+    }
+    .emoji-opt:hover { background: var(--bg-card-hover); transform: scale(1.15); }
+
+    /* Gráfico de barras simple */
+    .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row   { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
+    .bar-label { width: 80px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; background: var(--border); border-radius: 3px; height: 8px; }
+    .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .bar-value { width: 60px; color: var(--text-primary); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="./dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
+  <div style="font-size:1.1rem;font-weight:800;">👤 Mi perfil</div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span> BC</div>
+</nav>
+
+<main class="container page" style="position:relative;">
+
+  <!-- Hero de perfil -->
+  <div class="profile-hero">
+    <div style="position:relative;">
+      <div class="avatar-circle" id="avatarCircle" onclick="toggleEmojiPicker()">
+        <span id="avatarEmoji">🎰</span>
+      </div>
+      <div style="position:absolute;bottom:0;right:0;font-size:0.6rem;background:var(--purple);
+                  color:#fff;border-radius:99px;padding:2px 5px;font-weight:700;">EDITAR</div>
+    </div>
+
+    <!-- Picker de emojis -->
+    <div class="emoji-picker" id="emojiPicker">
+      🎰🎲🃏🪙🎯🎳🏆⚡🔥💎👑🎸🎭🦁🐯🦊🐻🦝🤖👾🎮🕹️🚀🌙⭐💫🌈🎪🎡
+      .split('').map(e => `<div class="emoji-opt" onclick="setAvatar('${e}')">${e}</div>`).join('')
+    </div>
+
+    <div style="flex:1;">
+      <div style="font-size:1.5rem;font-weight:800;" id="profileUsername">—</div>
+      <div style="font-size:0.85rem;color:var(--text-muted);" id="profileEmail">—</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;" id="profileSince">—</div>
+    </div>
+
+    <div style="text-align:right;">
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Balance disponible</div>
+      <div style="font-size:2rem;font-weight:900;color:var(--green-neon);" id="profileBalance">—</div>
+      <div style="font-size:0.8rem;color:var(--gold);margin-top:2px;" id="profileLocked">—</div>
+    </div>
+  </div>
+
+  <!-- Stats rápidos -->
+  <div class="stats-grid" style="margin-bottom:1.5rem;" id="quickStats">
+    <div class="stat-card">
+      <div class="stat-card__label">Total apostado</div>
+      <div class="stat-card__value stat-card__value--purple" id="statWagered">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Total ganado</div>
+      <div class="stat-card__value stat-card__value--gold" id="statWon">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Resultado neto</div>
+      <div class="stat-card__value" id="statNet">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Partidas de casino</div>
+      <div class="stat-card__value" id="statGames">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Apuestas deportivas</div>
+      <div class="stat-card__value stat-card__value--purple" id="statSportBets">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Apuestas P2P</div>
+      <div class="stat-card__value" id="statP2P">—</div>
+    </div>
+  </div>
+
+  <!-- Gráfico de juegos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:1rem;font-size:0.9rem;color:var(--text-secondary);
+                  text-transform:uppercase;letter-spacing:1px;">Juegos de casino</div>
+      <div class="bar-chart" id="gameBreakdown">
+        <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:1rem;font-size:0.9rem;color:var(--text-secondary);
+                  text-transform:uppercase;letter-spacing:1px;">Apuestas deportivas</div>
+      <div id="sportBreakdown">
+        <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Últimas transacciones -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-weight:700;font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+        Últimas transacciones
+      </div>
+      <a href="./history.html" style="font-size:0.82rem;color:var(--purple-light);">Ver todas →</a>
+    </div>
+    <div id="recentTx">
+      <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+    </div>
+  </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script>
+  requireLogin();
+
+  const EMOJIS = ['🎰','🎲','🃏','🪙','🎯','🎳','🏆','⚡','🔥','💎','👑','🎸','🎭','🦁','🐯','🦊','🐻','🦝','🤖','👾','🎮','🕹️','🚀','🌙','⭐','💫','🌈','🎪','🎡'];
+
+  // Construye el picker de emojis
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-opt" onclick="setAvatar('${e}')">${e}</div>`
+  ).join('');
+
+  function toggleEmojiPicker() {
+    document.getElementById('emojiPicker').classList.toggle('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#avatarCircle') && !e.target.closest('#emojiPicker')) {
+      document.getElementById('emojiPicker').classList.remove('open');
+    }
+  });
+
+  function setAvatar(emoji) {
+    document.getElementById('avatarEmoji').textContent = emoji;
+    document.getElementById('emojiPicker').classList.remove('open');
+    // Guarda en localStorage (sin endpoint por ahora)
+    const user = Auth.getUser();
+    if (user) { user.avatarEmoji = emoji; Auth.setSession(Auth.getToken(), user); }
+    showToast('Avatar actualizado', 'success');
+  }
+
+  // ── Carga perfil ───────────────────────────────────────────────────────
+  async function loadProfile() {
+    try {
+      const [profileData, statsData, txData] = await Promise.all([
+        VB.user.profile(),
+        VB.user.stats(),
+        VB.wallet.transactions(1),
+      ]);
+
+      const user   = profileData.user;
+      const wallet = user.wallet;
+      const net    = parseFloat(wallet.netResult);
+
+      // Hero
+      document.getElementById('avatarEmoji').textContent    = user.avatarEmoji || '🎰';
+      document.getElementById('profileUsername').textContent = user.username;
+      document.getElementById('profileEmail').textContent    = user.email;
+      document.getElementById('profileSince').textContent    = `Miembro desde ${new Date(user.createdAt).toLocaleDateString('es-CR')}`;
+      document.getElementById('profileBalance').textContent  = parseFloat(wallet.available).toFixed(2) + ' BC';
+      document.getElementById('navBalance').textContent      = parseFloat(wallet.available).toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+      if (parseFloat(wallet.lockedBalance) > 0) {
+        document.getElementById('profileLocked').textContent =
+          parseFloat(wallet.lockedBalance).toFixed(2) + ' BC bloqueados en P2P';
+      } else {
+        document.getElementById('profileLocked').textContent = '';
+      }
+
+      // Stats rápidos
+      document.getElementById('statWagered').textContent   = parseFloat(wallet.totalWagered).toFixed(2) + ' BC';
+      document.getElementById('statWon').textContent       = parseFloat(wallet.totalWon).toFixed(2) + ' BC';
+      document.getElementById('statNet').textContent       = (net >= 0 ? '+' : '') + net.toFixed(2) + ' BC';
+      document.getElementById('statNet').style.color       = net >= 0 ? 'var(--green-neon)' : 'var(--red-accent)';
+      document.getElementById('statGames').textContent     = (user._count?.gameHistory || 0).toLocaleString();
+      document.getElementById('statSportBets').textContent = (user._count?.sportBets || 0).toLocaleString();
+      document.getElementById('statP2P').textContent       = (user._count?.privateBetParticipations || 0).toLocaleString();
+
+      // Gráfico de juegos
+      renderGameChart(statsData.gameStats);
+      renderSportStats(statsData.sportStats);
+
+      // Últimas transacciones
+      renderRecentTx(txData.transactions.slice(0, 8));
+
+    } catch (err) {
+      showToast('Error al cargar perfil', 'error');
+      console.error(err);
+    }
+  }
+
+  function renderGameChart(gameStats) {
+    const el = document.getElementById('gameBreakdown');
+    if (!gameStats.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin partidas registradas</div>';
+      return;
+    }
+
+    const maxCount = Math.max(...gameStats.map(g => g._count.id));
+    const gameColors = {
+      DICE: '#7c3aed', COINFLIP: '#f59e0b', CRASH: '#ef4444',
+      MINES: '#10b981', PLINKO: '#3b82f6', ROULETTE: '#ec4899',
+    };
+
+    el.innerHTML = `<div class="bar-chart">` + gameStats.map(g => `
+      <div class="bar-row">
+        <div class="bar-label">${g.gameType}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(g._count.id / maxCount * 100)}%;
+               background:${gameColors[g.gameType] || 'var(--purple)'};"></div>
+        </div>
+        <div class="bar-value">${g._count.id}</div>
+      </div>
+    `).join('') + `</div>`;
+  }
+
+  function renderSportStats(sportStats) {
+    const el = document.getElementById('sportBreakdown');
+    if (!sportStats.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin apuestas deportivas</div>';
+      return;
+    }
+
+    const total    = sportStats.reduce((s, x) => s + x._count.id, 0);
+    const won      = sportStats.find(x => x.status === 'WON')?._count.id || 0;
+    const lost     = sportStats.find(x => x.status === 'LOST')?._count.id || 0;
+    const pending  = sportStats.find(x => x.status === 'PENDING')?._count.id || 0;
+    const winRate  = total > 0 ? ((won / (won + lost)) * 100).toFixed(1) : '—';
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">
+        <div style="background:rgba(0,255,136,0.08);border-radius:var(--radius-md);padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">GANADAS</div>
+          <div style="font-weight:800;color:var(--green-neon);font-size:1.3rem;">${won}</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.08);border-radius:var(--radius-md);padding:10px;text-align:center;">
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">PERDIDAS</div>
+          <div style="font-weight:800;color:var(--red-accent);font-size:1.3rem;">${lost}</div>
+        </div>
+      </div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px;margin-bottom:8px;">
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">WIN RATE</div>
+        <div style="font-weight:800;color:var(--gold);font-size:1.5rem;">${winRate}%</div>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);">
+        ${pending} pendientes · ${total} total
+      </div>
+    `;
+  }
+
+  const TX_LABELS = {
+    ADMIN_DEPOSIT:    '🎁 Depósito admin',
+    ADMIN_WITHDRAW:   '📤 Retiro admin',
+    GAME_BET:         '🎲 Apuesta casino',
+    GAME_WIN:         '🏆 Ganancia casino',
+    SPORT_BET:        '⚽ Apuesta deportiva',
+    SPORT_WIN:        '🏆 Ganancia deportiva',
+    SPORT_REFUND:     '↩️ Reembolso deporte',
+    P2P_BET_LOCK:     '🔒 P2P bloqueado',
+    P2P_BET_WIN:      '🤝 Ganancia P2P',
+    P2P_BET_REFUND:   '↩️ Reembolso P2P',
+    SCHEDULED_BONUS:  '⏰ Bono automático',
+  };
+
+  function renderRecentTx(txs) {
+    const el = document.getElementById('recentTx');
+    if (!txs.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin transacciones</div>';
+      return;
+    }
+
+    el.innerHTML = txs.map(tx => {
+      const isPositive = ['ADMIN_DEPOSIT','GAME_WIN','SPORT_WIN','P2P_BET_WIN','SPORT_REFUND','P2P_BET_REFUND','SCHEDULED_BONUS'].includes(tx.type);
+      const amount     = parseFloat(tx.amount).toFixed(2);
+      const color      = isPositive ? 'var(--green-neon)' : 'var(--red-accent)';
+      const sign       = isPositive ? '+' : '−';
+
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.9rem;font-weight:500;">${TX_LABELS[tx.type] || tx.type}</div>
+            ${tx.note ? `<div style="font-size:0.75rem;color:var(--text-muted);">${tx.note}</div>` : ''}
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+              ${new Date(tx.createdAt).toLocaleString('es-CR')}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700;color:${color};">${sign}${amount} BC</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">
+              Saldo: ${parseFloat(tx.balanceAfter).toFixed(2)} BC
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>
