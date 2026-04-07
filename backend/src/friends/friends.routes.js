@@ -1,28 +1,46 @@
-// friends/friends.routes.js
+// backend/src/friends/friends.routes.js
+// Mismo patrón: estáticas primero, dinámicas al final
 
 const express = require('express');
 const { body } = require('express-validator');
-const {
-  searchUsers, sendRequest, respondRequest,
-  getFriends, getPendingRequests, removeFriend,
-} = require('./friends.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
+const {
+  searchUsers,
+  sendRequest,
+  respondRequest,
+  getFriends,
+  getPendingRequests,
+  removeFriend,
+} = require('./friends.controller');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// Rutas específicas PRIMERO (antes que '/')
-router.get('/search',   searchUsers);        // ?q=username
+// ── Rutas estáticas primero ────────────────────────────────────────────────
+
+// GET /api/friends/search?q=username
+router.get('/search', searchUsers);
+
+// GET /api/friends/requests — solicitudes pendientes RECIBIDAS
 router.get('/requests', getPendingRequests);
 
-// Luego la raíz
+// GET /api/friends — lista de amigos aceptados
 router.get('/', getFriends);
 
-router.post('/request', [body('addresseeId').notEmpty()], sendRequest);
+// POST /api/friends/request — enviar solicitud
+router.post('/request', [
+  body('addresseeId').notEmpty().withMessage('addresseeId requerido'),
+], sendRequest);
+
+// POST /api/friends/respond — aceptar o rechazar
 router.post('/respond', [
-  body('friendshipId').notEmpty(),
-  body('action').isIn(['accept', 'reject']),
+  body('friendshipId').notEmpty().withMessage('friendshipId requerido'),
+  body('action').isIn(['accept', 'reject']).withMessage('Acción: accept o reject'),
 ], respondRequest);
-router.post('/remove', [body('friendshipId').notEmpty()], removeFriend);
+
+// POST /api/friends/remove — eliminar amistad
+router.post('/remove', [
+  body('friendshipId').notEmpty().withMessage('friendshipId requerido'),
+], removeFriend);
 
 module.exports = router;
