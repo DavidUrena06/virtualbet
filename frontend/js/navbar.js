@@ -128,7 +128,7 @@
   // ── Logout global ─────────────────────────────────────────────────────
   window.logout = function () {
     Auth.clear();
-    window.location.href = '/pages/login.html';
+    window.location.href = './login.html';
   };
 
   // ── Init ─────────────────────────────────────────────────────────────
