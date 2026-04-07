@@ -130,8 +130,8 @@
 <body>
 
 <nav class="navbar">
- <a href="../pages/dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
-  <div style="font-size:1.1rem;font-weight:800;">🪙 Coinflip</div>
+  <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
+  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
@@ -222,6 +222,7 @@
 </main>
 
 <script src="../../js/api.js"></script>
+<script src="../js/navbar.js"></script>
 <script>
   requireLogin();
 

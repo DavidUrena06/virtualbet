@@ -10,113 +10,92 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-xl);
-      padding: 2rem;
+      padding: 1.5rem;
       display: flex;
       align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .profile-hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 0% 50%, rgba(124,58,237,0.08) 0%, transparent 60%);
-      pointer-events: none;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
     }
     .avatar-circle {
-      width: 80px; height: 80px;
+      width: 72px; height: 72px;
       border-radius: 50%;
       background: var(--bg-secondary);
       border: 2px solid var(--border);
       display: flex; align-items: center; justify-content: center;
-      font-size: 2.5rem; cursor: pointer;
+      font-size: 2.2rem; cursor: pointer;
       transition: all 0.2s; flex-shrink: 0;
     }
-    .avatar-circle:hover {
-      border-color: var(--purple);
-      box-shadow: 0 0 16px rgba(124,58,237,0.3);
-      transform: scale(1.05);
-    }
+    .avatar-circle:hover { border-color: var(--purple); transform: scale(1.05); }
 
-    /* Selector de emojis */
     .emoji-picker {
-      display: none;
+      position: absolute;
+      top: calc(var(--navbar-h) + 140px);
+      left: 1.25rem;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 1rem;
-      position: absolute;
-      top: 110px; left: 2rem;
+      padding: 0.85rem;
       z-index: 100;
       display: none;
       flex-wrap: wrap;
-      gap: 6px;
-      width: 220px;
+      gap: 4px;
+      width: 210px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     .emoji-picker.open { display: flex; }
     .emoji-opt {
-      width: 36px; height: 36px;
+      width: 34px; height: 34px;
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; cursor: pointer;
-      background: var(--bg-secondary);
-      transition: all 0.1s;
+      font-size: 1.2rem; cursor: pointer;
+      background: var(--bg-secondary); transition: all 0.1s;
     }
-    .emoji-opt:hover { background: var(--bg-card-hover); transform: scale(1.15); }
+    .emoji-opt:hover { background: var(--bg-card-hover); transform: scale(1.1); }
 
-    /* Gráfico de barras simple */
-    .bar-chart { display: flex; flex-direction: column; gap: 8px; }
-    .bar-row   { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
-    .bar-label { width: 80px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
-    .bar-track { flex: 1; background: var(--border); border-radius: 3px; height: 8px; }
-    .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-    .bar-value { width: 60px; color: var(--text-primary); font-weight: 600; }
+    .win-rate-bar {
+      height: 8px; border-radius: 4px;
+      background: var(--border); overflow: hidden; margin-top: 6px;
+    }
+    .win-rate-fill { height: 100%; border-radius: 4px; background: var(--green-neon); transition: width 0.6s ease; }
   </style>
 </head>
 <body>
 
 <nav class="navbar">
-  <a href="./dashboard.html" class="navbar__logo" style="font-size:1rem;">← VirtualBet</a>
-  <div style="font-size:1.1rem;font-weight:800;">👤 Mi perfil</div>
-  <div class="navbar__balance">🪙 <span id="navBalance">—</span> BC</div>
+  <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
+  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
-
 <main class="container page" style="position:relative;">
 
-  <!-- Hero de perfil -->
+  <!-- Hero -->
   <div class="profile-hero">
     <div style="position:relative;">
       <div class="avatar-circle" id="avatarCircle" onclick="toggleEmojiPicker()">
         <span id="avatarEmoji">🎰</span>
       </div>
-      <div style="position:absolute;bottom:0;right:0;font-size:0.6rem;background:var(--purple);
-                  color:#fff;border-radius:99px;padding:2px 5px;font-weight:700;">EDITAR</div>
+      <div style="position:absolute;bottom:-2px;right:-2px;background:var(--purple);color:#fff;
+                  border-radius:99px;padding:1px 5px;font-size:0.58rem;font-weight:700;">editar</div>
     </div>
 
-    <!-- Picker de emojis -->
-    <div class="emoji-picker" id="emojiPicker">
-      🎰🎲🃏🪙🎯🎳🏆⚡🔥💎👑🎸🎭🦁🐯🦊🐻🦝🤖👾🎮🕹️🚀🌙⭐💫🌈🎪🎡
-      .split('').map(e => `<div class="emoji-opt" onclick="setAvatar('${e}')">${e}</div>`).join('')
-    </div>
+    <div class="emoji-picker" id="emojiPicker"></div>
 
-    <div style="flex:1;">
-      <div style="font-size:1.5rem;font-weight:800;" id="profileUsername">—</div>
-      <div style="font-size:0.85rem;color:var(--text-muted);" id="profileEmail">—</div>
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;" id="profileSince">—</div>
+    <div style="flex:1;min-width:140px;">
+      <div style="font-size:1.3rem;font-weight:800;" id="profileUsername">—</div>
+      <div style="font-size:0.82rem;color:var(--text-muted);" id="profileEmail">—</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:3px;" id="profileSince">—</div>
     </div>
 
     <div style="text-align:right;">
-      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Balance disponible</div>
-      <div style="font-size:2rem;font-weight:900;color:var(--green-neon);" id="profileBalance">—</div>
-      <div style="font-size:0.8rem;color:var(--gold);margin-top:2px;" id="profileLocked">—</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px;">Balance disponible</div>
+      <div style="font-size:1.7rem;font-weight:900;color:var(--green-neon);" id="profileBalance">—</div>
+      <div style="font-size:0.78rem;color:var(--gold);margin-top:2px;" id="profileLocked"></div>
     </div>
   </div>
 
   <!-- Stats rápidos -->
-  <div class="stats-grid" style="margin-bottom:1.5rem;" id="quickStats">
+  <div class="stats-grid" style="margin-bottom:1.25rem;">
     <div class="stat-card">
       <div class="stat-card__label">Total apostado</div>
       <div class="stat-card__value stat-card__value--purple" id="statWagered">—</div>
@@ -130,7 +109,7 @@
       <div class="stat-card__value" id="statNet">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-card__label">Partidas de casino</div>
+      <div class="stat-card__label">Juegos casino</div>
       <div class="stat-card__value" id="statGames">—</div>
     </div>
     <div class="stat-card">
@@ -143,49 +122,84 @@
     </div>
   </div>
 
-  <!-- Gráfico de juegos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+  <!-- Estadísticas detalladas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
 
+    <!-- Casino stats -->
     <div class="card">
-      <div style="font-weight:700;margin-bottom:1rem;font-size:0.9rem;color:var(--text-secondary);
-                  text-transform:uppercase;letter-spacing:1px;">Juegos de casino</div>
-      <div class="bar-chart" id="gameBreakdown">
-        <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+      <div style="font-weight:700;font-size:0.82rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">
+        Casino
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0.75rem;">
+        <div style="text-align:center;background:rgba(0,255,136,0.08);border-radius:var(--radius-md);padding:8px;">
+          <div style="font-size:0.65rem;color:var(--text-muted);">GANADAS</div>
+          <div style="font-weight:800;color:var(--green-neon);" id="casinoWon">—</div>
+        </div>
+        <div style="text-align:center;background:rgba(239,68,68,0.08);border-radius:var(--radius-md);padding:8px;">
+          <div style="font-size:0.65rem;color:var(--text-muted);">PERDIDAS</div>
+          <div style="font-weight:800;color:var(--red-accent);" id="casinoLost">—</div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;">Win rate</div>
+      <div class="win-rate-bar">
+        <div class="win-rate-fill" id="casinoWinBar" style="width:0%;"></div>
+      </div>
+      <div style="font-size:0.82rem;font-weight:700;color:var(--green-neon);margin-top:4px;" id="casinoWinRate">—%</div>
     </div>
 
+    <!-- Sport stats -->
     <div class="card">
-      <div style="font-weight:700;margin-bottom:1rem;font-size:0.9rem;color:var(--text-secondary);
-                  text-transform:uppercase;letter-spacing:1px;">Apuestas deportivas</div>
-      <div id="sportBreakdown">
-        <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+      <div style="font-weight:700;font-size:0.82rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">
+        Deportes
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0.75rem;">
+        <div style="text-align:center;background:rgba(0,255,136,0.08);border-radius:var(--radius-md);padding:8px;">
+          <div style="font-size:0.65rem;color:var(--text-muted);">GANADAS</div>
+          <div style="font-weight:800;color:var(--green-neon);" id="sportWon">—</div>
+        </div>
+        <div style="text-align:center;background:rgba(239,68,68,0.08);border-radius:var(--radius-md);padding:8px;">
+          <div style="font-size:0.65rem;color:var(--text-muted);">PERDIDAS</div>
+          <div style="font-weight:800;color:var(--red-accent);" id="sportLost">—</div>
+        </div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;">Win rate</div>
+      <div class="win-rate-bar">
+        <div class="win-rate-fill" id="sportWinBar" style="width:0%;"></div>
+      </div>
+      <div style="font-size:0.82rem;font-weight:700;color:var(--green-neon);margin-top:4px;" id="sportWinRate">—%</div>
     </div>
 
   </div>
 
   <!-- Últimas transacciones -->
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-      <div style="font-weight:700;font-size:0.9rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
+      <div style="font-weight:700;font-size:0.82rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
         Últimas transacciones
       </div>
-      <a href="./history.html" style="font-size:0.82rem;color:var(--purple-light);">Ver todas →</a>
+      <a href="./history.html" style="font-size:0.8rem;color:var(--purple-light);">Ver todo →</a>
     </div>
     <div id="recentTx">
-      <div style="text-align:center;color:var(--text-muted);">Cargando...</div>
+      <div style="text-align:center;color:var(--text-muted);padding:1rem;">Cargando...</div>
     </div>
+  </div>
+
+  <!-- Acciones rápidas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.25rem;">
+    <a href="./history.html" class="btn btn--ghost" style="text-align:center;">📋 Ver historial</a>
+    <a href="./friends.html" class="btn btn--ghost" style="text-align:center;">👥 Mis amigos</a>
   </div>
 
 </main>
 
 <script src="../js/api.js"></script>
+<script src="../js/navbar.js"></script>
 <script>
   requireLogin();
 
-  const EMOJIS = ['🎰','🎲','🃏','🪙','🎯','🎳','🏆','⚡','🔥','💎','👑','🎸','🎭','🦁','🐯','🦊','🐻','🦝','🤖','👾','🎮','🕹️','🚀','🌙','⭐','💫','🌈','🎪','🎡'];
+  const EMOJIS = ['🎰','🎲','🃏','🪙','🎯','🎳','🏆','⚡','🔥','💎','👑','🎸','🦁','🐯','🤖','👾','🎮','🚀','🌙','⭐','💫','🎪','🦝','🐻','🦊','🌈','🎭','🎡','🏅','🤑'];
 
-  // Construye el picker de emojis
+  // Construye el picker
   document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
     `<div class="emoji-opt" onclick="setAvatar('${e}')">${e}</div>`
   ).join('');
@@ -193,176 +207,113 @@
   function toggleEmojiPicker() {
     document.getElementById('emojiPicker').classList.toggle('open');
   }
-
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#avatarCircle') && !e.target.closest('#emojiPicker')) {
       document.getElementById('emojiPicker').classList.remove('open');
     }
   });
-
   function setAvatar(emoji) {
     document.getElementById('avatarEmoji').textContent = emoji;
     document.getElementById('emojiPicker').classList.remove('open');
-    // Guarda en localStorage (sin endpoint por ahora)
-    const user = Auth.getUser();
-    if (user) { user.avatarEmoji = emoji; Auth.setSession(Auth.getToken(), user); }
+    const u = Auth.getUser();
+    if (u) { u.avatarEmoji = emoji; Auth.setSession(Auth.getToken(), u); }
     showToast('Avatar actualizado', 'success');
   }
 
-  // ── Carga perfil ───────────────────────────────────────────────────────
+  const TX_LABELS = {
+    ADMIN_DEPOSIT:'🎁 Depósito admin', ADMIN_WITHDRAW:'📤 Retiro admin',
+    GAME_BET:'🎲 Apuesta casino', GAME_WIN:'🏆 Ganancia casino',
+    SPORT_BET:'⚽ Apuesta deportiva', SPORT_WIN:'🏆 Ganancia deportiva',
+    SPORT_REFUND:'↩️ Reembolso', P2P_BET_LOCK:'🔒 P2P bloqueado',
+    P2P_BET_WIN:'🤝 Ganancia P2P', P2P_BET_REFUND:'↩️ Reembolso P2P',
+    SCHEDULED_BONUS:'⏰ Bono auto',
+  };
+  const POSITIVES = ['ADMIN_DEPOSIT','GAME_WIN','SPORT_WIN','P2P_BET_WIN','SPORT_REFUND','P2P_BET_REFUND','SCHEDULED_BONUS'];
+
   async function loadProfile() {
     try {
-      const [profileData, statsData, txData] = await Promise.all([
+      // Carga en paralelo — si stats falla, perfil sigue cargando
+      const [profileData, txData] = await Promise.all([
         VB.user.profile(),
-        VB.user.stats(),
         VB.wallet.transactions(1),
       ]);
 
       const user   = profileData.user;
       const wallet = user.wallet;
-      const net    = parseFloat(wallet.netResult);
+      const avail  = parseFloat(wallet.available || 0);
+      const locked = parseFloat(wallet.lockedBalance || 0);
+      const net    = parseFloat(wallet.netResult || 0);
 
       // Hero
       document.getElementById('avatarEmoji').textContent    = user.avatarEmoji || '🎰';
       document.getElementById('profileUsername').textContent = user.username;
       document.getElementById('profileEmail').textContent    = user.email;
-      document.getElementById('profileSince').textContent    = `Miembro desde ${new Date(user.createdAt).toLocaleDateString('es-CR')}`;
-      document.getElementById('profileBalance').textContent  = parseFloat(wallet.available).toFixed(2) + ' BC';
-      document.getElementById('navBalance').textContent      = parseFloat(wallet.available).toLocaleString('es-CR', { minimumFractionDigits: 2 });
+      document.getElementById('profileSince').textContent    =
+        'Miembro desde ' + new Date(user.createdAt).toLocaleDateString('es-CR');
+      document.getElementById('profileBalance').textContent  = avail.toFixed(2) + ' BC';
+      document.getElementById('navBalance').textContent      = avail.toLocaleString('es-CR', { minimumFractionDigits: 2 });
 
-      if (parseFloat(wallet.lockedBalance) > 0) {
-        document.getElementById('profileLocked').textContent =
-          parseFloat(wallet.lockedBalance).toFixed(2) + ' BC bloqueados en P2P';
-      } else {
-        document.getElementById('profileLocked').textContent = '';
+      if (locked > 0) {
+        document.getElementById('profileLocked').textContent = locked.toFixed(2) + ' BC bloqueados en P2P';
       }
 
-      // Stats rápidos
-      document.getElementById('statWagered').textContent   = parseFloat(wallet.totalWagered).toFixed(2) + ' BC';
-      document.getElementById('statWon').textContent       = parseFloat(wallet.totalWon).toFixed(2) + ' BC';
+      // Stats
+      document.getElementById('statWagered').textContent   = parseFloat(wallet.totalWagered || 0).toFixed(2) + ' BC';
+      document.getElementById('statWon').textContent       = parseFloat(wallet.totalWon || 0).toFixed(2) + ' BC';
       document.getElementById('statNet').textContent       = (net >= 0 ? '+' : '') + net.toFixed(2) + ' BC';
       document.getElementById('statNet').style.color       = net >= 0 ? 'var(--green-neon)' : 'var(--red-accent)';
       document.getElementById('statGames').textContent     = (user._count?.gameHistory || 0).toLocaleString();
       document.getElementById('statSportBets').textContent = (user._count?.sportBets || 0).toLocaleString();
       document.getElementById('statP2P').textContent       = (user._count?.privateBetParticipations || 0).toLocaleString();
 
-      // Gráfico de juegos
-      renderGameChart(statsData.gameStats);
-      renderSportStats(statsData.sportStats);
-
       // Últimas transacciones
-      renderRecentTx(txData.transactions.slice(0, 8));
+      renderTx(txData.transactions.slice(0, 8));
+
+      // Carga stats detallados en segundo plano
+      VB.user.stats().then(s => {
+        document.getElementById('casinoWon').textContent  = s.casino.won;
+        document.getElementById('casinoLost').textContent = s.casino.lost;
+        const cr = parseFloat(s.casino.winRate);
+        document.getElementById('casinoWinBar').style.width  = Math.min(cr, 100) + '%';
+        document.getElementById('casinoWinRate').textContent = s.casino.winRate;
+
+        document.getElementById('sportWon').textContent  = s.sports.won;
+        document.getElementById('sportLost').textContent = s.sports.lost;
+        const sr = parseFloat(s.sports.winRate);
+        document.getElementById('sportWinBar').style.width  = Math.min(sr, 100) + '%';
+        document.getElementById('sportWinRate').textContent = s.sports.winRate;
+      }).catch(() => { /* silencioso si falla */ });
 
     } catch (err) {
-      showToast('Error al cargar perfil', 'error');
-      console.error(err);
+      console.error('Error cargando perfil:', err);
+      showToast('Error al cargar perfil: ' + err.message, 'error');
     }
   }
 
-  function renderGameChart(gameStats) {
-    const el = document.getElementById('gameBreakdown');
-    if (!gameStats.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin partidas registradas</div>';
-      return;
-    }
-
-    const maxCount = Math.max(...gameStats.map(g => g._count.id));
-    const gameColors = {
-      DICE: '#7c3aed', COINFLIP: '#f59e0b', CRASH: '#ef4444',
-      MINES: '#10b981', PLINKO: '#3b82f6', ROULETTE: '#ec4899',
-    };
-
-    el.innerHTML = `<div class="bar-chart">` + gameStats.map(g => `
-      <div class="bar-row">
-        <div class="bar-label">${g.gameType}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${(g._count.id / maxCount * 100)}%;
-               background:${gameColors[g.gameType] || 'var(--purple)'};"></div>
-        </div>
-        <div class="bar-value">${g._count.id}</div>
-      </div>
-    `).join('') + `</div>`;
-  }
-
-  function renderSportStats(sportStats) {
-    const el = document.getElementById('sportBreakdown');
-    if (!sportStats.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin apuestas deportivas</div>';
-      return;
-    }
-
-    const total    = sportStats.reduce((s, x) => s + x._count.id, 0);
-    const won      = sportStats.find(x => x.status === 'WON')?._count.id || 0;
-    const lost     = sportStats.find(x => x.status === 'LOST')?._count.id || 0;
-    const pending  = sportStats.find(x => x.status === 'PENDING')?._count.id || 0;
-    const winRate  = total > 0 ? ((won / (won + lost)) * 100).toFixed(1) : '—';
-
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">
-        <div style="background:rgba(0,255,136,0.08);border-radius:var(--radius-md);padding:10px;text-align:center;">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">GANADAS</div>
-          <div style="font-weight:800;color:var(--green-neon);font-size:1.3rem;">${won}</div>
-        </div>
-        <div style="background:rgba(239,68,68,0.08);border-radius:var(--radius-md);padding:10px;text-align:center;">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">PERDIDAS</div>
-          <div style="font-weight:800;color:var(--red-accent);font-size:1.3rem;">${lost}</div>
-        </div>
-      </div>
-      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px;margin-bottom:8px;">
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">WIN RATE</div>
-        <div style="font-weight:800;color:var(--gold);font-size:1.5rem;">${winRate}%</div>
-      </div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);">
-        ${pending} pendientes · ${total} total
-      </div>
-    `;
-  }
-
-  const TX_LABELS = {
-    ADMIN_DEPOSIT:    '🎁 Depósito admin',
-    ADMIN_WITHDRAW:   '📤 Retiro admin',
-    GAME_BET:         '🎲 Apuesta casino',
-    GAME_WIN:         '🏆 Ganancia casino',
-    SPORT_BET:        '⚽ Apuesta deportiva',
-    SPORT_WIN:        '🏆 Ganancia deportiva',
-    SPORT_REFUND:     '↩️ Reembolso deporte',
-    P2P_BET_LOCK:     '🔒 P2P bloqueado',
-    P2P_BET_WIN:      '🤝 Ganancia P2P',
-    P2P_BET_REFUND:   '↩️ Reembolso P2P',
-    SCHEDULED_BONUS:  '⏰ Bono automático',
-  };
-
-  function renderRecentTx(txs) {
+  function renderTx(txs) {
     const el = document.getElementById('recentTx');
     if (!txs.length) {
-      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Sin transacciones</div>';
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;">Sin transacciones</div>';
       return;
     }
-
     el.innerHTML = txs.map(tx => {
-      const isPositive = ['ADMIN_DEPOSIT','GAME_WIN','SPORT_WIN','P2P_BET_WIN','SPORT_REFUND','P2P_BET_REFUND','SCHEDULED_BONUS'].includes(tx.type);
-      const amount     = parseFloat(tx.amount).toFixed(2);
-      const color      = isPositive ? 'var(--green-neon)' : 'var(--red-accent)';
-      const sign       = isPositive ? '+' : '−';
-
+      const isPos  = POSITIVES.includes(tx.type);
+      const color  = isPos ? 'var(--green-neon)' : 'var(--red-accent)';
+      const sign   = isPos ? '+' : '−';
       return `
         <div style="display:flex;align-items:center;justify-content:space-between;
-                    padding:10px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:0.9rem;font-weight:500;">${TX_LABELS[tx.type] || tx.type}</div>
-            ${tx.note ? `<div style="font-size:0.75rem;color:var(--text-muted);">${tx.note}</div>` : ''}
-            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
-              ${new Date(tx.createdAt).toLocaleString('es-CR')}
+                    padding:9px 0;border-bottom:1px solid var(--border);gap:8px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:0.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${TX_LABELS[tx.type] || tx.type}
             </div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">${new Date(tx.createdAt).toLocaleString('es-CR')}</div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-weight:700;color:${color};">${sign}${amount} BC</div>
-            <div style="font-size:0.75rem;color:var(--text-muted);">
-              Saldo: ${parseFloat(tx.balanceAfter).toFixed(2)} BC
-            </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:700;color:${color};">${sign}${parseFloat(tx.amount).toFixed(2)} BC</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">Saldo: ${parseFloat(tx.balanceAfter).toFixed(2)}</div>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 

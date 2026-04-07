@@ -3,47 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VirtualBet — Dashboard</title>
+  <title>VirtualBet — Casino</title>
   <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
 
-<!-- Navbar -->
 <nav class="navbar">
-  <div class="navbar__logo">🎰 VirtualBet</div>
-
-  <div class="navbar__nav">
-    <a href="./dashboard.html" class="navbar__link active">Casino</a>
-    <a href="./sports.html"    class="navbar__link">Deportes</a>
-    <a href="./history.html"   class="navbar__link">Historial</a>
-    <a href="./profile.html"   class="navbar__link">Perfil</a>
-  </div>
-
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div class="navbar__balance">
-      🪙 <span id="navBalance">—</span>
-    </div>
-    <button class="btn btn--ghost" onclick="logout()" style="padding:6px 14px;font-size:0.85rem;">
-      Salir
-    </button>
-  </div>
+  <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
+  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
-<!-- Contenido -->
 <main class="container page">
 
   <!-- Bienvenida -->
-  <div style="margin-bottom:2rem;">
-    <h1 style="font-size:1.75rem;font-weight:800;margin-bottom:0.5rem;">
+  <div style="margin-bottom:1.5rem;">
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.25rem;">
       Bienvenido, <span id="username" style="color:var(--purple-light);">...</span> 👋
     </h1>
-    <p style="color:var(--text-secondary);">¿Qué querés jugar hoy?</p>
+    <p style="color:var(--text-secondary);font-size:0.9rem;">Moneda: <strong style="color:var(--gold);">BetCoins (BC)</strong></p>
   </div>
 
-  <!-- Stats del usuario -->
-  <div class="stats-grid" style="margin-bottom:2.5rem;">
+  <!-- Stats -->
+  <div class="stats-grid" style="margin-bottom:2rem;">
     <div class="stat-card">
-      <div class="stat-card__label">Balance actual</div>
+      <div class="stat-card__label">Balance disponible</div>
       <div class="stat-card__value stat-card__value--green" id="balance">—</div>
     </div>
     <div class="stat-card">
@@ -60,72 +44,87 @@
     </div>
   </div>
 
-  <!-- Lobby de juegos -->
-  <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
-    Juegos del casino
-  </h2>
+  <!-- Juegos -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+      Juegos del casino
+    </h2>
+  </div>
 
-  <div class="games-grid" style="margin-bottom:3rem;">
-
-    <div class="card card--game" onclick="goTo('dice.html')">
+  <div class="games-grid" style="margin-bottom:2.5rem;">
+    <div class="card card--game" onclick="goGame('dice.html')">
       <span class="game-icon">🎲</span>
       <div class="game-name">Dice</div>
-      <div class="game-desc">Predecí el resultado del dado</div>
+      <div class="game-desc">Predecí el dado</div>
+      <div class="game-edge">House edge 1%</div>
     </div>
-
-    <div class="card card--game" onclick="goTo('coinflip.html')">
+    <div class="card card--game" onclick="goGame('coinflip.html')">
       <span class="game-icon">🪙</span>
       <div class="game-name">Coinflip</div>
-      <div class="game-desc">Cara o cruz, 50/50</div>
+      <div class="game-desc">Cara o cruz</div>
+      <div class="game-edge">House edge 2%</div>
     </div>
-
-    <div class="card card--game" onclick="goTo('crash.html')">
+    <div class="card card--game" onclick="goGame('crash.html')">
       <span class="game-icon">📈</span>
       <div class="game-name">Crash</div>
-      <div class="game-desc">Retirá antes del crash</div>
+      <div class="game-desc">Retirá a tiempo</div>
+      <div class="game-edge">House edge 3%</div>
     </div>
-
-    <div class="card card--game" onclick="goTo('mines.html')">
+    <div class="card card--game" onclick="goGame('mines.html')">
       <span class="game-icon">💣</span>
       <div class="game-name">Mines</div>
       <div class="game-desc">Evitá las minas</div>
+      <div class="game-edge">House edge 3%</div>
     </div>
-
-    <div class="card card--game" onclick="goTo('plinko.html')">
+    <div class="card card--game" onclick="goGame('plinko.html')">
       <span class="game-icon">🔵</span>
       <div class="game-name">Plinko</div>
       <div class="game-desc">La bolita cae</div>
+      <div class="game-edge">House edge 1-5%</div>
     </div>
-
-    <div class="card card--game" onclick="goTo('roulette.html')">
+    <div class="card card--game" onclick="goGame('roulette.html')">
       <span class="game-icon">🎡</span>
       <div class="game-name">Ruleta</div>
-      <div class="game-desc">Rueda europea</div>
+      <div class="game-desc">Ruleta europea</div>
+      <div class="game-edge">House edge 2.7%</div>
     </div>
-
   </div>
 
-  <!-- Apuestas deportivas preview -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+  <!-- Apuestas deportivas -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
+    <h2 style="font-size:1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
       Apuestas deportivas
     </h2>
-    <a href="./sports.html" class="btn btn--ghost" style="font-size:0.85rem;padding:6px 14px;">
-      Ver todos →
-    </a>
+    <a href="./sports.html" class="btn btn--ghost btn--sm">Ver todos →</a>
   </div>
 
   <div id="matchesPreview">
-    <div style="text-align:center;padding:2rem;color:var(--text-muted);">Cargando partidos...</div>
+    <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
+      Cargando partidos...
+    </div>
+  </div>
+
+  <!-- Acceso rápido P2P y amigos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.5rem;">
+    <a href="./p2p.html" class="card" style="cursor:pointer;display:block;text-decoration:none;">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem;">🤝</div>
+      <div style="font-weight:700;margin-bottom:0.25rem;">Apuestas P2P</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);">Apostá con tus amigos en tiempo real</div>
+    </a>
+    <a href="./friends.html" class="card" style="cursor:pointer;display:block;text-decoration:none;">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem;">👥</div>
+      <div style="font-weight:700;margin-bottom:0.25rem;">Mis amigos</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);">Buscá y conectá con otros jugadores</div>
+    </a>
   </div>
 
 </main>
 
 <script src="../js/api.js"></script>
+<script src="../js/navbar.js"></script>
 <script>
   requireLogin();
-
-  const user = Auth.getUser();
 
   async function loadDashboard() {
     try {
@@ -134,97 +133,86 @@
         VB.wallet.balance(),
       ]);
 
-      const profile = profileData.user;
-      const wallet  = walletData.wallet;
+      const u = profileData.user;
+      const w = walletData.wallet;
+      const available = parseFloat(w.balance) - parseFloat(w.lockedBalance || 0);
 
-      document.getElementById('username').textContent = profile.username;
-
-      document.getElementById('navBalance').textContent =
-        parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 });
-
-      document.getElementById('balance').textContent =
-        parseFloat(wallet.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
-      document.getElementById('totalWagered').textContent =
-        parseFloat(wallet.totalWagered).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
-      document.getElementById('totalWon').textContent =
-        parseFloat(wallet.totalWon).toLocaleString('es-CR', { minimumFractionDigits: 2 }) + ' 🪙';
-      document.getElementById('gamesPlayed').textContent =
-        (profile._count?.gameHistory || 0).toLocaleString();
+      document.getElementById('username').textContent     = u.username;
+      document.getElementById('balance').textContent      = available.toFixed(2) + ' BC';
+      document.getElementById('totalWagered').textContent = parseFloat(w.totalWagered).toFixed(2) + ' BC';
+      document.getElementById('totalWon').textContent     = parseFloat(w.totalWon).toFixed(2) + ' BC';
+      document.getElementById('gamesPlayed').textContent  = (u._count?.gameHistory || 0).toLocaleString();
 
     } catch (err) {
-      showToast('Error al cargar el perfil', 'error');
+      console.error('Error cargando dashboard:', err);
     }
   }
 
   async function loadMatchesPreview() {
+    const container = document.getElementById('matchesPreview');
     try {
-      const data = await VB.betting.matches('', 'UPCOMING');
-      const container = document.getElementById('matchesPreview');
+      // Carga todos los partidos UPCOMING sin filtro de liga
+      const data = await VB.sports.matches('', 'UPCOMING');
 
-      if (!data.matches.length) {
+      if (!data || !data.matches || data.matches.length === 0) {
         container.innerHTML = `
-          <div class="card" style="text-align:center;color:var(--text-muted);">
-            No hay partidos disponibles por ahora.
+          <div class="card" style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+            No hay partidos disponibles. El admin los publica desde el panel de administración.
           </div>`;
         return;
       }
 
       const preview = data.matches.slice(0, 3);
+
       container.innerHTML = preview.map(m => `
         <div class="card" style="margin-bottom:0.75rem;cursor:pointer;"
              onclick="window.location.href='./sports.html'">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;
-                          letter-spacing:1px;margin-bottom:4px;">${m.league}</div>
-              <div style="font-weight:700;font-size:1rem;">
-                ${m.teamHome} <span style="color:var(--text-muted)">vs</span> ${m.teamAway}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="min-width:0;">
+              <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">
+                ${m.league}
               </div>
-              <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">
-                ${new Date(m.startsAt).toLocaleString('es-CR')}
+              <div style="font-weight:700;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${m.teamHome} vs ${m.teamAway}
+              </div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">
+                ${timeUntil(m.startsAt)}
               </div>
             </div>
-            <div style="display:flex;gap:8px;">
-              <div style="text-align:center;background:var(--bg-secondary);
-                          border-radius:var(--radius-sm);padding:6px 12px;">
-                <div style="font-size:0.7rem;color:var(--text-muted);">LOCAL</div>
-                <div style="font-weight:800;color:var(--green-neon);">${parseFloat(m.oddHome).toFixed(2)}</div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
+                <div style="font-size:0.62rem;color:var(--text-muted);">LOCAL</div>
+                <div style="font-weight:800;color:var(--green-neon);font-size:0.95rem;">${parseFloat(m.oddHome).toFixed(2)}</div>
               </div>
-              <div style="text-align:center;background:var(--bg-secondary);
-                          border-radius:var(--radius-sm);padding:6px 12px;">
-                <div style="font-size:0.7rem;color:var(--text-muted);">EMPATE</div>
-                <div style="font-weight:800;color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</div>
+              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
+                <div style="font-size:0.62rem;color:var(--text-muted);">EMPATE</div>
+                <div style="font-weight:800;color:var(--gold);font-size:0.95rem;">${parseFloat(m.oddDraw).toFixed(2)}</div>
               </div>
-              <div style="text-align:center;background:var(--bg-secondary);
-                          border-radius:var(--radius-sm);padding:6px 12px;">
-                <div style="font-size:0.7rem;color:var(--text-muted);">VISITA</div>
-                <div style="font-weight:800;color:var(--blue-accent);">${parseFloat(m.oddAway).toFixed(2)}</div>
+              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
+                <div style="font-size:0.62rem;color:var(--text-muted);">VISITA</div>
+                <div style="font-weight:800;color:var(--blue-accent);font-size:0.95rem;">${parseFloat(m.oddAway).toFixed(2)}</div>
               </div>
             </div>
           </div>
         </div>
       `).join('');
 
-    } catch {
-      document.getElementById('matchesPreview').innerHTML =
-        `<div class="card" style="color:var(--text-muted);text-align:center;">
-           No se pudieron cargar los partidos
-         </div>`;
+    } catch (err) {
+      console.error('Error cargando partidos:', err);
+      container.innerHTML = `
+        <div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+          Error al cargar partidos: ${err.message}
+        </div>`;
     }
   }
 
-  function goTo(page) {
-    window.location.href = `./${page}`;
+  function goGame(page) {
+    window.location.href = `./games/${page}`;
   }
 
-  function logout() {
-    Auth.clear();
-    window.location.href = './login.html';
-  }
-
+  // Init
   loadDashboard();
   loadMatchesPreview();
 </script>
-
 </body>
 </html>
