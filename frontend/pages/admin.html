@@ -6,7 +6,6 @@
   <title>VirtualBet — Admin</title>
   <link rel="stylesheet" href="../css/main.css">
   <style>
-    /* Sidebar admin */
     .sidebar-section {
       font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 1.5px; color: var(--text-muted);
@@ -23,11 +22,8 @@
     .sidebar-link:hover  { background: var(--bg-card); color: var(--text-primary); }
     .sidebar-link.active { background: var(--bg-card); color: var(--purple-light); border-left-color: var(--purple); }
     .sidebar-link .icon  { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
-
-    /* Secciones */
     .section { display: none; }
     .section.active { display: block; }
-
     .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .admin-table th {
       background: var(--bg-secondary); padding: 9px 12px; text-align: left;
@@ -36,8 +32,6 @@
     }
     .admin-table td { padding: 9px 12px; border-top: 1px solid var(--border); vertical-align: middle; }
     .admin-table tr:hover td { background: var(--bg-card-hover); }
-
-    /* Modal */
     .modal-bg {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.8); z-index: 600;
@@ -50,8 +44,6 @@
       width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto;
     }
     .modal h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
-
-    /* Boton hamburguesa admin (para el sidebar) */
     .admin-menu-btn {
       display: none;
       position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -61,6 +53,8 @@
       z-index: 300; box-shadow: 0 4px 16px rgba(124,58,237,0.5);
       align-items: center; justify-content: center;
     }
+    .league-tab { padding:5px 13px; border-radius:99px; font-size:0.8rem; font-weight:600; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-secondary); cursor:pointer; transition:all 0.15s; font-family:inherit; }
+    .league-tab.active { background:rgba(124,58,237,0.15); border-color:var(--purple); color:var(--purple-light); }
     @media(max-width:900px){ .admin-menu-btn { display: flex; } }
   </style>
 </head>
@@ -68,22 +62,18 @@
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
-<!-- Overlay para sidebar en móvil -->
 <div class="admin-overlay" id="adminOverlay" onclick="toggleSidebar()"></div>
 
 <div class="admin-layout">
-
-  <!-- Sidebar -->
   <aside class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-section">General</div>
     <button class="sidebar-link active" onclick="goTo('dashboard')" data-section="dashboard">
       <span class="icon">📊</span> Dashboard
     </button>
-
     <div class="sidebar-section">Usuarios</div>
     <button class="sidebar-link" onclick="goTo('users')" data-section="users">
       <span class="icon">👥</span> Usuarios
@@ -91,19 +81,16 @@
     <button class="sidebar-link" onclick="goTo('betcoins')" data-section="betcoins">
       <span class="icon">🪙</span> BetCoins
     </button>
-
     <div class="sidebar-section">Sportsbook</div>
     <button class="sidebar-link" onclick="goTo('matches')" data-section="matches">
       <span class="icon">⚽</span> Partidos
     </button>
-
     <div class="sidebar-section">Sistema</div>
     <button class="sidebar-link" onclick="goTo('logs')" data-section="logs">
       <span class="icon">📋</span> Logs
     </button>
   </aside>
 
-  <!-- Contenido -->
   <main class="admin-content">
 
     <!-- DASHBOARD -->
@@ -161,7 +148,6 @@
     <div class="section" id="section-betcoins">
       <h1 style="font-size:1.35rem;font-weight:800;margin-bottom:1.25rem;">BetCoins</h1>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-bottom:1.5rem;">
-        <!-- Dar a usuario -->
         <div class="card">
           <div style="font-weight:700;margin-bottom:0.9rem;">Dar a usuario</div>
           <div class="form-group"><label class="form-label">Username</label>
@@ -175,7 +161,6 @@
           </div>
           <button class="btn btn--green btn--full" style="margin-top:0.9rem;" onclick="giveCoins()">🪙 Dar BetCoins</button>
         </div>
-        <!-- Dar a todos -->
         <div class="card">
           <div style="font-weight:700;margin-bottom:0.9rem;">Dar a TODOS los usuarios</div>
           <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-md);padding:8px;margin-bottom:0.75rem;font-size:0.8rem;color:var(--gold);">
@@ -203,10 +188,6 @@
         <button class="league-tab" onclick="setMatchFilter('LIVE',this)">En vivo</button>
         <button class="league-tab" onclick="setMatchFilter('FINISHED',this)">Finalizados</button>
       </div>
-      <style>
-        .league-tab{padding:5px 13px;border-radius:99px;font-size:0.8rem;font-weight:600;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;transition:all 0.15s;font-family:inherit;}
-        .league-tab.active{background:rgba(124,58,237,0.15);border-color:var(--purple);color:var(--purple-light);}
-      </style>
       <div class="table-wrapper">
         <table class="admin-table">
           <thead><tr><th>Liga</th><th>Partido</th><th>Odds H/D/A</th><th>Inicio</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -233,7 +214,6 @@
   </main>
 </div>
 
-<!-- FAB para abrir sidebar en móvil -->
 <button class="admin-menu-btn" onclick="toggleSidebar()">☰</button>
 
 <!-- Modal crear partido -->
@@ -294,19 +274,11 @@
 
 <script src="../js/api.js"></script>
 <script src="../js/navbar.js"></script>
-<!-- TODO tu HTML queda EXACTAMENTE igual hasta el <script> -->
-
-<script src="../js/api.js"></script>
-<script src="../js/navbar.js"></script>
-
 <script>
   requireAdminRole();
 
-  let usersPage   = 1, logsPage = 1, matchFilter = 'UPCOMING';
+  let usersPage = 1, logsPage = 1, matchFilter = 'UPCOMING';
   let searchTimer = null, resolveMatchId = null, resolveResult = null;
-  let selectedUserId = null;
-
-  document.getElementById('adminName').textContent = Auth.getUser()?.username || '—';
 
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
@@ -320,10 +292,10 @@
     document.querySelector(`[data-section="${section}"]`).classList.add('active');
     document.getElementById('adminSidebar').classList.remove('open');
     document.getElementById('adminOverlay').classList.remove('open');
-    ({ dashboard: loadStats, users: ()=>loadUsers(1), betcoins: ()=>{}, matches: ()=>loadMatches('UPCOMING'), logs: ()=>loadLogs(1) })[section]?.();
+    ({ dashboard: loadStats, users: () => loadUsers(1), betcoins: () => {}, matches: () => loadMatches('UPCOMING'), logs: () => loadLogs(1) })[section]?.();
   }
 
-  // ── STATS ─────────────────────────────────────────
+  // ── STATS ─────────────────────────────────────────────────────────────
   async function loadStats() {
     try {
       const { stats } = await VB.admin.stats();
@@ -338,81 +310,212 @@
     } catch (err) { showToast('Error al cargar stats', 'error'); }
   }
 
-  // ── FIX APLICADO (ÚNICO CAMBIO REAL) ─────────────────────────
+  // ── USUARIOS ──────────────────────────────────────────────────────────
+  function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadUsers(1), 400);
+  }
+
+  async function loadUsers(page = 1) {
+    if (page < 1) return;
+    usersPage = page;
+    const search = document.getElementById('userSearch')?.value || '';
+    const tbody  = document.getElementById('usersBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+    try {
+      const { users, pagination } = await VB.admin.users(page, search);
+      document.getElementById('usersPagination').textContent =
+        `Pág. ${pagination.page}/${pagination.pages} · ${pagination.total} usuarios`;
+      tbody.innerHTML = users.map(u => {
+        const bal = parseFloat(u.wallet?.balance || 0) - parseFloat(u.wallet?.lockedBalance || 0);
+        const wag = parseFloat(u.wallet?.totalWagered || 0);
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.1rem;">${u.avatarEmoji || '🎰'}</span>
+            <div><div style="font-weight:600;">${u.username}</div><div style="font-size:0.7rem;color:var(--text-muted);">${u.role}</div></div>
+          </div></td>
+          <td style="font-size:0.8rem;color:var(--text-secondary);">${u.email}</td>
+          <td style="font-weight:700;color:var(--green-neon);">${bal.toFixed(2)} BC</td>
+          <td style="color:var(--text-secondary);">${wag.toFixed(2)} BC</td>
+          <td>${u.isBanned ? '<span class="badge badge--loss">Baneado</span>' : '<span class="badge badge--win">Activo</span>'}</td>
+          <td><button class="btn btn--ghost btn--sm" onclick="openUserActions('${u.id}','${u.username}','${u.isBanned}')">Acciones</button></td>
+        </tr>`;
+      }).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Error</td></tr>';
+    }
+  }
+
+  async function openUserActions(userId, username, isBanned) {
+    const action = await promptAction(username, isBanned === 'true');
+    if (!action) return;
+    if (action === 'give') {
+      goTo('betcoins');
+      document.getElementById('giveUsername').value = username;
+    } else if (action === 'ban') {
+      const reason = prompt('Razón del baneo:') || 'Violación de términos';
+      try { await VB.admin.banUser({ userId, reason }); showToast(`${username} baneado`, 'success'); loadUsers(usersPage); }
+      catch (err) { showToast(err.message, 'error'); }
+    } else if (action === 'unban') {
+      try { await VB.admin.unbanUser({ userId }); showToast(`${username} desbaneado`, 'success'); loadUsers(usersPage); }
+      catch (err) { showToast(err.message, 'error'); }
+    }
+  }
+
+  function promptAction(username, isBanned) {
+    return new Promise(resolve => {
+      const action = window.prompt(`Acciones para ${username}:\n\n1 → Dar BetCoins\n2 → ${isBanned ? 'Desbanear' : 'Banear'}\n\nEscribí 1 o 2:`);
+      if (!action) { resolve(null); return; }
+      if (action === '1') resolve('give');
+      else if (action === '2') resolve(isBanned ? 'unban' : 'ban');
+      else resolve(null);
+    });
+  }
+
+  // ── BETCOINS ──────────────────────────────────────────────────────────
+  async function giveCoins() {
+    const username = document.getElementById('giveUsername').value.trim();
+    const amount   = parseFloat(document.getElementById('giveAmount').value);
+    const note     = document.getElementById('giveNote').value.trim();
+    if (!username || !amount) { showToast('Completá los campos', 'error'); return; }
+    try {
+      const { users } = await VB.admin.users(1, username);
+      const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+      if (!found) { showToast('Usuario no encontrado', 'error'); return; }
+      await VB.admin.giveBetCoins({ userId: found.id, amount, note });
+      showToast(`${amount} BC enviados a ${found.username}`, 'success');
+      document.getElementById('giveUsername').value = '';
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function giveCoinsAll() {
+    const amount = parseFloat(document.getElementById('giveAllAmount').value);
+    const note   = document.getElementById('giveAllNote').value.trim();
+    if (!amount) { showToast('Ingresá un monto', 'error'); return; }
+    if (!confirm(`¿Dar ${amount} BC a TODOS los usuarios activos?`)) return;
+    try {
+      const data = await VB.admin.giveBetCoinsAll({ amount, note });
+      showToast(data.message, 'success');
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  // ── PARTIDOS ──────────────────────────────────────────────────────────
+  function setMatchFilter(status, el) {
+    matchFilter = status;
+    document.querySelectorAll('.league-tab').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    loadMatches(status);
+  }
+
+  async function loadMatches(status = 'UPCOMING') {
+    const tbody = document.getElementById('matchesBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando...</td></tr>';
+    try {
+      const { matches } = await VB.sports.matches('', status);
+      if (!matches.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Sin partidos</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = matches.map(m => `<tr>
+        <td style="font-size:0.78rem;color:var(--text-muted);">${m.league}</td>
+        <td><div style="font-weight:600;">${m.teamHome} vs ${m.teamAway}</div>
+            ${m.result ? `<div style="font-size:0.72rem;color:var(--text-muted);">${m.result} · ${m.scoreHome ?? '?'}-${m.scoreAway ?? '?'}</div>` : ''}</td>
+        <td style="font-size:0.82rem;">
+          <span style="color:#60a5fa;">${parseFloat(m.oddHome).toFixed(2)}</span> /
+          <span style="color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</span> /
+          <span style="color:var(--red-accent);">${parseFloat(m.oddAway).toFixed(2)}</span>
+        </td>
+        <td style="font-size:0.78rem;color:var(--text-secondary);">${new Date(m.startsAt).toLocaleString('es-CR')}</td>
+        <td><span class="badge ${m.status === 'UPCOMING' ? 'badge--pending' : m.status === 'LIVE' ? 'badge--win' : 'badge--admin'}">${m.status}</span></td>
+        <td>${m.status !== 'FINISHED' && m.status !== 'CANCELLED'
+          ? `<button class="btn btn--primary btn--sm" onclick="openResolveModal('${m.id}','${m.teamHome}','${m.teamAway}')">Resolver</button>`
+          : '—'}</td>
+      </tr>`).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Error</td></tr>';
+    }
+  }
 
   function openMatchModal() {
     const now = new Date(Date.now() + 30 * 60 * 1000);
     const pad = n => String(n).padStart(2, '0');
-
-    const localStr =
-      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}` +
-      `T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-    document.getElementById('mStartsAt').value = localStr;
+    document.getElementById('mStartsAt').value =
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     document.getElementById('matchModal').classList.add('open');
   }
 
   async function createMatch() {
-    const league   = document.getElementById('mLeague').value;
-    const home     = document.getElementById('mHome').value.trim();
-    const away     = document.getElementById('mAway').value.trim();
-    const oh       = parseFloat(document.getElementById('mOddHome').value);
-    const od       = parseFloat(document.getElementById('mOddDraw').value);
-    const oa       = parseFloat(document.getElementById('mOddAway').value);
+    const league  = document.getElementById('mLeague').value;
+    const home    = document.getElementById('mHome').value.trim();
+    const away    = document.getElementById('mAway').value.trim();
+    const oh      = parseFloat(document.getElementById('mOddHome').value);
+    const od      = parseFloat(document.getElementById('mOddDraw').value);
+    const oa      = parseFloat(document.getElementById('mOddAway').value);
     const localStr = document.getElementById('mStartsAt').value;
-
-    if (!home || !away || !localStr) {
-      showToast('Completá todos los campos', 'error');
-      return;
-    }
-
-    if (oh < 1.01 || od < 1.01 || oa < 1.01) {
-      showToast('Odds mínimos: 1.01', 'error');
-      return;
-    }
-
+    if (!home || !away || !localStr) { showToast('Completá todos los campos', 'error'); return; }
+    if (oh < 1.01 || od < 1.01 || oa < 1.01) { showToast('Odds mínimos: 1.01', 'error'); return; }
     const localDate = new Date(localStr);
-
-    if (isNaN(localDate)) {
-      showToast('Fecha inválida', 'error');
-      return;
-    }
-
-    if (localDate <= new Date()) {
-      showToast('La fecha debe ser en el futuro', 'error');
-      return;
-    }
-
-    const startsAtISO = localDate.toISOString();
-
+    if (isNaN(localDate) || localDate <= new Date()) { showToast('La fecha debe ser en el futuro', 'error'); return; }
     try {
-      await VB.admin.createMatch({
-        league,
-        teamHome: home,
-        teamAway: away,
-        oddHome: oh,
-        oddDraw: od,
-        oddAway: oa,
-        startsAt: startsAtISO
-      });
-
-      showToast(
-        `✓ Partido creado: ${home} vs ${away} · ${new Date(startsAtISO).toLocaleString('es-CR')}`,
-        'success'
-      );
-
+      await VB.admin.createMatch({ league, teamHome: home, teamAway: away, oddHome: oh, oddDraw: od, oddAway: oa, startsAt: localDate.toISOString() });
+      showToast(`✓ Partido creado: ${home} vs ${away}`, 'success');
       document.getElementById('matchModal').classList.remove('open');
       loadMatches(matchFilter);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
 
-    } catch (err) {
-      showToast(err.message, 'error');
+  function openResolveModal(id, home, away) {
+    resolveMatchId = id; resolveResult = null;
+    document.getElementById('resolveInfo').textContent = `${home} vs ${away}`;
+    document.getElementById('rHomeLabel').textContent  = home;
+    document.getElementById('rAwayLabel').textContent  = away;
+    document.getElementById('rScoreHome').value = 0;
+    document.getElementById('rScoreAway').value = 0;
+    ['rHome', 'rDraw', 'rAway'].forEach(i => document.getElementById(i).classList.remove('selected'));
+    document.getElementById('resolveModal').classList.add('open');
+  }
+
+  function setResult(r) {
+    resolveResult = r;
+    ['rHome', 'rDraw', 'rAway'].forEach(i => document.getElementById(i).classList.remove('selected'));
+    document.getElementById({ HOME: 'rHome', DRAW: 'rDraw', AWAY: 'rAway' }[r]).classList.add('selected');
+  }
+
+  async function resolveMatch() {
+    if (!resolveResult) { showToast('Elegí un resultado', 'error'); return; }
+    try {
+      const data = await VB.admin.resolveMatch({
+        matchId: resolveMatchId, result: resolveResult,
+        scoreHome: parseInt(document.getElementById('rScoreHome').value),
+        scoreAway: parseInt(document.getElementById('rScoreAway').value),
+      });
+      showToast(`Resuelto. Sport: ${data.paidSportBets} pagadas · P2P: ${data.resolvedP2P} resueltas`, 'success');
+      document.getElementById('resolveModal').classList.remove('open');
+      loadMatches(matchFilter);
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  // ── LOGS ──────────────────────────────────────────────────────────────
+  async function loadLogs(page = 1) {
+    if (page < 1) return;
+    logsPage = page;
+    const tbody = document.getElementById('logsBody');
+    try {
+      const { logs } = await VB.admin.logs(page);
+      tbody.innerHTML = logs.map(l => `<tr>
+        <td style="font-weight:600;">${l.admin?.username || '—'}</td>
+        <td><code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.75rem;">${l.action}</code></td>
+        <td style="color:var(--text-secondary);">${l.targetUser?.username || '—'}</td>
+        <td style="color:var(--text-muted);font-size:0.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${JSON.stringify(l.payload || {})}</td>
+        <td style="color:var(--text-muted);font-size:0.78rem;white-space:nowrap;">${new Date(l.createdAt).toLocaleString('es-CR')}</td>
+      </tr>`).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Error</td></tr>';
     }
   }
 
-  // ── TODO LO DEMÁS SIGUE IGUAL ─────────────────────
-
+  // Init
   loadStats();
 </script>
-
 </body>
 </html>
