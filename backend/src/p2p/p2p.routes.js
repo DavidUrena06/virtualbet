@@ -52,18 +52,21 @@ router.post('/cancel', [
   body('privateBetId').notEmpty().withMessage('privateBetId requerido'),
 ], cancelPrivateBet);
 
-// POST /api/p2p/invite — invitar amigo a una apuesta
+// POST /api/p2p/invite — invitar amigo (solo elige a quién, el invitado elige su selección)
 router.post('/invite', [
   body('privateBetId').notEmpty().withMessage('privateBetId requerido'),
   body('inviteeId').notEmpty().withMessage('inviteeId requerido'),
-  body('selection').isIn(['HOME', 'DRAW', 'AWAY']).withMessage('Selección inválida'),
-  body('amount').isFloat({ min: 1 }).withMessage('Mínimo: 1 BC'),
+  // suggestedAmount es opcional
+  body('suggestedAmount').optional().isFloat({ min: 1 }).withMessage('Monto sugerido inválido'),
 ], inviteFriend);
 
-// POST /api/p2p/invite/respond — aceptar o rechazar invitación
+// POST /api/p2p/invite/respond — aceptar (con selection+amount propios) o rechazar
 router.post('/invite/respond', [
   body('invitationId').notEmpty().withMessage('invitationId requerido'),
   body('action').isIn(['accept', 'reject']).withMessage('Acción inválida: accept o reject'),
+  // Solo obligatorios al aceptar — la validación final la hace el controller
+  body('selection').optional().isIn(['HOME', 'DRAW', 'AWAY']).withMessage('Selección inválida'),
+  body('amount').optional().isFloat({ min: 1 }).withMessage('Monto inválido'),
 ], respondToInvitation);
 
 // ══════════════════════════════════════════════════════════════

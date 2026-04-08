@@ -262,21 +262,16 @@ const joinPrivateBet = async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // INVITAR AMIGO A APUESTA P2P
+// El creador solo elige a quién invitar y (opcionalmente) un monto
+// sugerido. La selección la decide el invitado al aceptar.
 // ══════════════════════════════════════════════════════════════
 
 const inviteFriend = async (req, res) => {
   try {
     const inviterId  = req.user.id;
-    const { privateBetId, inviteeId, selection, amount } = req.body;
+    // suggestedAmount es opcional — si no viene, se usa el mínimo de la sala
+    const { privateBetId, inviteeId, suggestedAmount } = req.body;
 
-    const parsedAmount = parseFloat(amount);
-
-    if (!['HOME','DRAW','AWAY'].includes(selection)) {
-      return res.status(400).json({ error: 'Selección inválida: HOME, DRAW o AWAY' });
-    }
-    if (parsedAmount < 1) {
-      return res.status(400).json({ error: 'Monto mínimo: 1 BC' });
-    }
     if (inviterId === inviteeId) {
       return res.status(400).json({ error: 'No podés invitarte a vos mismo' });
     }
@@ -287,8 +282,8 @@ const inviteFriend = async (req, res) => {
       include: { participants: true, match: true },
     });
 
-    if (!bet)                    return res.status(404).json({ error: 'Apuesta no encontrada' });
-    if (bet.status !== 'OPEN')   return res.status(400).json({ error: 'La apuesta ya no acepta invitaciones' });
+    if (!bet)                  return res.status(404).json({ error: 'Apuesta no encontrada' });
+    if (bet.status !== 'OPEN') return res.status(400).json({ error: 'La apuesta ya no acepta invitaciones' });
     if (new Date() >= bet.match.startsAt) {
       return res.status(400).json({ error: 'El partido ya inició' });
     }
@@ -303,7 +298,7 @@ const inviteFriend = async (req, res) => {
       return res.status(403).json({ error: 'Solo participantes pueden invitar' });
     }
 
-    // Verifica que sean amigos
+    // Verifica amistad
     const amigoConfirmado = await sonAmigos(inviterId, inviteeId);
     if (!amigoConfirmado) {
       return res.status(403).json({ error: 'Solo podés invitar a tus amigos' });
@@ -315,20 +310,22 @@ const inviteFriend = async (req, res) => {
       return res.status(400).json({ error: 'Ese usuario ya está participando en la apuesta' });
     }
 
-    // Verifica monto mínimo de la sala
-    if (parsedAmount < parseFloat(bet.minAmount)) {
-      return res.status(400).json({ error: `El monto mínimo de esta sala es ${bet.minAmount} BC` });
-    }
+    // El monto guardado en la invitación es solo referencial (mínimo de la sala)
+    // El invitado puede cambiarlo al aceptar, respetando ese mínimo
+    const montoReferencia = suggestedAmount
+      ? Math.max(parseFloat(suggestedAmount), parseFloat(bet.minAmount))
+      : parseFloat(bet.minAmount);
 
     // Verifica que el invitado exista
     const invitee = await prisma.user.findUnique({
       where:  { id: inviteeId },
       select: { id: true, username: true, isBanned: true },
     });
-    if (!invitee)          return res.status(404).json({ error: 'Usuario no encontrado' });
-    if (invitee.isBanned)  return res.status(400).json({ error: 'No podés invitar a ese usuario' });
+    if (!invitee)         return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (invitee.isBanned) return res.status(400).json({ error: 'No podés invitar a ese usuario' });
 
-    // Crea la invitación (unique constraint previene duplicados automáticamente)
+    // Crea la invitación — selection queda como placeholder HOME hasta que el invitado elija
+    // (se sobreescribe al aceptar; el campo existe por el schema pero no tiene semántica aquí)
     try {
       await prisma.$transaction(async (tx) => {
         const invitacion = await tx.p2PInvitation.create({
@@ -336,9 +333,9 @@ const inviteFriend = async (req, res) => {
             privateBetId,
             inviterId,
             inviteeId,
-            selection,
-            amount:  parsedAmount,
-            status: 'PENDING',
+            selection: 'HOME', // placeholder — el invitado elige al aceptar
+            amount:    montoReferencia,
+            status:    'PENDING',
           },
         });
 
@@ -348,30 +345,27 @@ const inviteFriend = async (req, res) => {
             userId:  inviteeId,
             type:    'P2P_INVITE',
             title:   '¡Invitación a apuesta P2P!',
-            message: `${req.user.username} te invitó a apostar en "${bet.title}" con ${parsedAmount} BC`,
+            message: `${req.user.username} te invitó a "${bet.title}" — mínimo ${parseFloat(bet.minAmount).toFixed(0)} BC`,
             data: {
               privateBetId,
-              invitationId: invitacion.id,
-              selection,
-              amount:       parsedAmount,
-              inviterName:  req.user.username,
-              betTitle:     bet.title,
-              match:        `${bet.match.teamHome} vs ${bet.match.teamAway}`,
+              invitationId:    invitacion.id,
+              suggestedAmount: montoReferencia,
+              minAmount:       parseFloat(bet.minAmount),
+              inviterName:     req.user.username,
+              betTitle:        bet.title,
+              match:           `${bet.match.teamHome} vs ${bet.match.teamAway}`,
             },
           },
         });
       });
     } catch (err) {
-      // El unique constraint lanza un error si ya existe la invitación
       if (err.code === 'P2002') {
         return res.status(400).json({ error: 'Ya enviaste una invitación a ese usuario para esta apuesta' });
       }
       throw err;
     }
 
-    res.json({
-      message: `Invitación enviada a ${invitee.username}`,
-    });
+    res.json({ message: `Invitación enviada a ${invitee.username}` });
   } catch (err) {
     console.error('[P2P] inviteFriend:', err);
     res.status(400).json({ error: err.message });
@@ -380,15 +374,26 @@ const inviteFriend = async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // RESPONDER A INVITACIÓN (aceptar o rechazar)
+// Al aceptar, el invitado elige su propia selección y monto.
 // ══════════════════════════════════════════════════════════════
 
 const respondToInvitation = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { invitationId, action } = req.body; // action: 'accept' | 'reject'
+    const { invitationId, action, selection, amount } = req.body;
 
     if (!['accept', 'reject'].includes(action)) {
       return res.status(400).json({ error: 'Acción inválida: accept o reject' });
+    }
+
+    // Al aceptar son obligatorios selection y amount
+    if (action === 'accept') {
+      if (!['HOME','DRAW','AWAY'].includes(selection)) {
+        return res.status(400).json({ error: 'Selección inválida: HOME, DRAW o AWAY' });
+      }
+      if (!amount || parseFloat(amount) < 1) {
+        return res.status(400).json({ error: 'Monto inválido' });
+      }
     }
 
     // Obtiene la invitación
@@ -417,16 +422,14 @@ const respondToInvitation = async (req, res) => {
         where: { id: invitationId },
         data:  { status: 'REJECTED', respondedAt: new Date() },
       });
-
       return res.json({ message: 'Invitación rechazada' });
     }
 
-    // --- ACEPTAR: exactamente igual que joinPrivateBet ---
-    const bet    = invitacion.privateBet;
-    const amount = parseFloat(invitacion.amount);
+    // --- ACEPTAR ---
+    const bet          = invitacion.privateBet;
+    const parsedAmount = parseFloat(amount);
 
     if (bet.status !== 'OPEN') {
-      // Marca como expirada si la apuesta ya no está abierta
       await prisma.p2PInvitation.update({
         where: { id: invitationId },
         data:  { status: 'EXPIRED', respondedAt: new Date() },
@@ -440,6 +443,11 @@ const respondToInvitation = async (req, res) => {
         data:  { status: 'EXPIRED', respondedAt: new Date() },
       });
       return res.status(400).json({ error: 'El partido ya inició, la invitación expiró' });
+    }
+
+    // Verifica monto mínimo de la sala
+    if (parsedAmount < parseFloat(bet.minAmount)) {
+      return res.status(400).json({ error: `El monto mínimo de esta sala es ${bet.minAmount} BC` });
     }
 
     // Verifica que no esté ya adentro
@@ -461,48 +469,48 @@ const respondToInvitation = async (req, res) => {
       return res.status(400).json({ error: 'La sala ya está llena' });
     }
 
-    // Ejecuta la misma lógica que joinPrivateBet en una transacción atómica
+    // Ejecuta igual que joinPrivateBet — transacción atómica
     await prisma.$transaction(async (tx) => {
-      // 1. Marca invitación como aceptada
+      // 1. Marca invitación como aceptada (actualiza también selection y amount reales)
       await tx.p2PInvitation.update({
         where: { id: invitationId },
-        data:  { status: 'ACCEPTED', respondedAt: new Date() },
+        data:  { status: 'ACCEPTED', respondedAt: new Date(), selection, amount: parsedAmount },
       });
 
-      // 2. Agrega como participante con la selección y monto de la invitación
+      // 2. Agrega como participante con la selección y monto que eligió el invitado
       await tx.privateBetParticipant.create({
         data: {
           privateBetId: bet.id,
           userId,
-          selection:    invitacion.selection,
-          amount,
-          status:       'ACTIVE',
+          selection,      // ← elegida por el invitado
+          amount:         parsedAmount,
+          status:         'ACTIVE',
         },
       });
 
       // 3. Actualiza pool total
       await tx.privateBet.update({
         where: { id: bet.id },
-        data:  { totalPool: { increment: amount } },
+        data:  { totalPool: { increment: parsedAmount } },
       });
 
       // 4. Bloquea los BetCoins del invitado
-      await lockBetCoins(tx, userId, amount, bet.id);
+      await lockBetCoins(tx, userId, parsedAmount, bet.id);
 
-      // 5. Notifica al creador de la apuesta
+      // 5. Notifica al creador
       await tx.notification.create({
         data: {
           userId:  bet.creatorId,
           type:    'P2P_NEW_PARTICIPANT',
           title:   'Nuevo participante',
-          message: `${req.user.username} aceptó tu invitación y se unió a "${bet.title}" con ${amount} BC`,
+          message: `${req.user.username} aceptó tu invitación y apostó ${parsedAmount} BC en "${bet.title}"`,
           data:    { privateBetId: bet.id, username: req.user.username },
         },
       });
     });
 
     res.json({
-      message: `¡Aceptaste la invitación! Apostaste ${amount} BC en "${bet.title}"`,
+      message:      `¡Aceptaste! Apostaste ${parsedAmount} BC en "${bet.title}"`,
       privateBetId: bet.id,
     });
   } catch (err) {
