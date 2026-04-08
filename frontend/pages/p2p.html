@@ -6,71 +6,166 @@
   <title>VirtualBet — Apuestas P2P</title>
   <link rel="stylesheet" href="../css/main.css">
   <style>
-    .tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:1.25rem; }
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
     .tab-btn {
-      padding:10px 18px; font-size:0.88rem; font-weight:600;
-      color:var(--text-secondary); cursor:pointer;
-      border-bottom:2px solid transparent; transition:all 0.15s;
-      background:none; border-top:none; border-left:none; border-right:none;
-      font-family:inherit; white-space:nowrap;
+      padding: 10px 18px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+      font-family: inherit;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .tab-btn.active { color:var(--purple-light); border-bottom-color:var(--purple-light); }
+    .tab-btn.active { color: var(--purple-light); border-bottom-color: var(--purple-light); }
 
+    /* ── Cards P2P ─────────────────────────────────────────── */
     .p2p-card {
-      background:var(--bg-card); border:1px solid var(--border);
-      border-radius:var(--radius-lg); padding:1.1rem;
-      margin-bottom:0.7rem; cursor:pointer; transition:all 0.15s;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem;
+      margin-bottom: 0.7rem;
+      cursor: pointer;
+      transition: all 0.15s;
     }
-    .p2p-card:hover { border-color:var(--border-hover); transform:translateY(-1px); }
+    .p2p-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
 
-    .status-pill { display:inline-block; padding:2px 9px; border-radius:99px; font-size:0.72rem; font-weight:700; }
-    .status-OPEN     { background:rgba(0,255,136,0.12); color:var(--green-neon); }
-    .status-LOCKED   { background:rgba(245,158,11,0.12); color:var(--gold); }
-    .status-RESOLVED { background:rgba(124,58,237,0.15); color:var(--purple-light); }
-    .status-CANCELLED{ background:rgba(239,68,68,0.12);  color:var(--red-accent); }
+    /* ── Invitación card ────────────────────────────────────── */
+    .invite-card {
+      background: var(--bg-card);
+      border: 1px solid var(--purple);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.7rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .invite-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--purple), var(--purple-light));
+    }
 
-    /* Modal hoja desde abajo en móvil */
+    /* ── Status pills ───────────────────────────────────────── */
+    .status-pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .status-OPEN      { background: rgba(0,255,136,0.12);  color: var(--green-neon); }
+    .status-LOCKED    { background: rgba(245,158,11,0.12); color: var(--gold); }
+    .status-RESOLVED  { background: rgba(124,58,237,0.15); color: var(--purple-light); }
+    .status-CANCELLED { background: rgba(239,68,68,0.12);  color: var(--red-accent); }
+
+    /* ── Modal / Sheet ──────────────────────────────────────── */
     .sheet-bg {
-      display:none; position:fixed; inset:0;
-      background:rgba(0,0,0,0.8); z-index:500;
-      align-items:flex-end; justify-content:center;
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 500;
+      align-items: flex-end;
+      justify-content: center;
     }
-    .sheet-bg.open { display:flex; }
+    .sheet-bg.open { display: flex; }
     .sheet {
-      background:var(--bg-card); border:1px solid var(--border);
-      border-radius:var(--radius-xl) var(--radius-xl) 0 0;
-      padding:1.5rem; width:100%; max-width:560px;
-      max-height:90vh; overflow-y:auto;
-      animation:slide-up 0.25s ease;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slide-up 0.25s ease;
     }
-    @media(min-width:640px){
-      .sheet-bg { align-items:center; padding:1rem; }
-      .sheet { border-radius:var(--radius-xl); }
+    @media (min-width: 640px) {
+      .sheet-bg { align-items: center; padding: 1rem; }
+      .sheet { border-radius: var(--radius-xl); }
     }
 
+    /* ── Botones de selección ───────────────────────────────── */
     .sel-btn {
-      flex:1; padding:10px 6px; border-radius:var(--radius-md);
-      border:1px solid var(--border); background:var(--bg-secondary);
-      cursor:pointer; transition:all 0.15s; text-align:center; font-family:inherit;
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      font-family: inherit;
     }
-    .sel-btn:hover { border-color:var(--purple); }
-    .sel-btn.active { background:rgba(124,58,237,0.2); border-color:var(--purple); }
-    .sel-btn .sel-label { font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
-    .sel-btn .sel-val   { font-weight:700; font-size:0.88rem; }
+    .sel-btn:hover  { border-color: var(--purple); }
+    .sel-btn.active { background: rgba(124,58,237,0.2); border-color: var(--purple); }
+    .sel-btn .sel-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .sel-btn .sel-val   { font-weight: 700; font-size: 0.88rem; }
 
-    /* Participantes en el detalle */
+    /* ── Participante row ───────────────────────────────────── */
     .participant-row {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:8px 0; border-bottom:1px solid var(--border); gap:8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
     }
-    .participant-row:last-child { border-bottom:none; }
+    .participant-row:last-child { border-bottom: none; }
+
+    /* ── Amigo item en modal de invitar ─────────────────────── */
+    .friend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--bg-secondary);
+    }
+    .friend-item:hover { border-color: var(--purple); }
+    .friend-item.selected { border-color: var(--purple); background: rgba(124,58,237,0.1); }
+    .friend-item input[type="checkbox"] { accent-color: var(--purple); width: 16px; height: 16px; cursor: pointer; }
+
+    /* ── Badge de invitaciones pendientes ───────────────────── */
+    .tab-badge {
+      display: inline-block;
+      background: var(--purple);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 800;
+      border-radius: 99px;
+      padding: 1px 6px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
@@ -99,10 +194,13 @@
 
   <!-- Tabs -->
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="setTab('all',   this)">Todas</button>
-    <button class="tab-btn"        onclick="setTab('OPEN',  this)">Abiertas</button>
-    <button class="tab-btn"        onclick="setTab('LOCKED',this)">Bloqueadas</button>
-    <button class="tab-btn"        onclick="setTab('RESOLVED',this)">Resueltas</button>
+    <button class="tab-btn active" onclick="setTab('all',this)">Mis apuestas</button>
+    <button class="tab-btn" onclick="setTab('OPEN',this)">Abiertas</button>
+    <button class="tab-btn" onclick="setTab('LOCKED',this)">Bloqueadas</button>
+    <button class="tab-btn" onclick="setTab('RESOLVED',this)">Resueltas</button>
+    <button class="tab-btn" id="tabInvitaciones" onclick="setTab('invitations',this)">
+      Invitaciones <span class="tab-badge" id="invBadge" style="display:none;">0</span>
+    </button>
   </div>
 
   <div id="p2pList">
@@ -114,11 +212,13 @@
 
 </main>
 
-<!-- ════ SHEET: CREAR APUESTA P2P ════ -->
+<!-- ════════════════════════════════════════════
+     SHEET: CREAR APUESTA P2P (3 pasos)
+     ════════════════════════════════════════════ -->
 <div class="sheet-bg" id="createSheet" onclick="maybeCloseSheet(event,'createSheet')">
   <div class="sheet">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <h3 style="font-size:1.1rem;font-weight:700;">Crear apuesta P2P</h3>
+      <h3 style="font-size:1.1rem;font-weight:700;" id="createSheetTitle">Crear apuesta P2P</h3>
       <button onclick="document.getElementById('createSheet').classList.remove('open')"
               style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;">✕</button>
     </div>
@@ -126,17 +226,19 @@
     <!-- Paso 1: elegir partido -->
     <div id="createStep1">
       <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;
-                  letter-spacing:1px;margin-bottom:0.75rem;">1. Elegí el partido</div>
+                  letter-spacing:1px;margin-bottom:0.75rem;">1 de 3 — Elegí el partido</div>
       <div id="matchPickerList">
         <div style="text-align:center;color:var(--text-muted);padding:1rem;">
-          <div class="loading-spinner" style="margin:0 auto 0.5rem;"></div>
-          Cargando partidos...
+          <div class="loading-spinner" style="margin:0 auto 0.5rem;"></div>Cargando partidos...
         </div>
       </div>
     </div>
 
-    <!-- Paso 2: configurar -->
+    <!-- Paso 2: configurar apuesta -->
     <div id="createStep2" style="display:none;">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;
+                  letter-spacing:1px;margin-bottom:0.75rem;">2 de 3 — Configurá la sala</div>
+
       <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px;margin-bottom:1rem;">
         <div style="font-size:0.7rem;color:var(--text-muted);">Partido seleccionado</div>
         <div style="font-weight:700;" id="selectedMatchLabel">—</div>
@@ -150,8 +252,8 @@
 
         <div class="form-group">
           <label class="form-label">Tu selección</label>
-          <div style="display:flex;gap:6px;" id="createSelRow">
-            <button class="sel-btn" onclick="setCreateSel('HOME',this)" id="createSelHome">
+          <div style="display:flex;gap:6px;">
+            <button class="sel-btn" onclick="setCreateSel('HOME',this)">
               <div class="sel-label">Local</div>
               <div class="sel-val" id="createHomeLabel">—</div>
             </button>
@@ -159,7 +261,7 @@
               <div class="sel-label">Empate</div>
               <div class="sel-val">X</div>
             </button>
-            <button class="sel-btn" onclick="setCreateSel('AWAY',this)" id="createSelAway">
+            <button class="sel-btn" onclick="setCreateSel('AWAY',this)">
               <div class="sel-label">Visita</div>
               <div class="sel-val" id="createAwayLabel">—</div>
             </button>
@@ -180,7 +282,9 @@
         <div class="form-group">
           <label class="form-label">Máximo de participantes</label>
           <select class="form-input" id="p2pMaxParticipants">
-            <option value="5">5</option>
+            <option value="2">2 (1 vs 1)</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
             <option value="10" selected>10</option>
             <option value="20">20</option>
             <option value="50">50</option>
@@ -195,16 +299,87 @@
 
         <div style="display:flex;gap:8px;">
           <button class="btn btn--ghost" onclick="backToStep1()" style="flex:1;">← Volver</button>
-          <button class="btn btn--orange btn--full" onclick="createP2PBet()" id="createBtn">
-            Crear sala
+          <button class="btn btn--orange" onclick="goToStep3()" style="flex:2;" id="goStep3Btn">
+            Siguiente → Invitar amigos
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Paso 3: invitar amigos (opcional) -->
+    <div id="createStep3" style="display:none;">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;
+                  letter-spacing:1px;margin-bottom:0.75rem;">3 de 3 — Invitá amigos (opcional)</div>
+
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px;
+                  margin-bottom:1rem;font-size:0.82rem;color:var(--text-secondary);">
+        Las invitaciones se enviarán al crear la sala. Podés invitar más desde el detalle después.
+      </div>
+
+      <!-- Configuración de invitación: selección y monto por defecto -->
+      <div style="display:grid;gap:0.6rem;margin-bottom:1rem;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Selección para los invitados</label>
+          <div style="display:flex;gap:6px;" id="inviteSelRow">
+            <button class="sel-btn" onclick="setInviteSel('HOME',this)">
+              <div class="sel-label">Local</div>
+              <div class="sel-val" id="inviteHomeLabel">—</div>
+            </button>
+            <button class="sel-btn" onclick="setInviteSel('DRAW',this)">
+              <div class="sel-label">Empate</div>
+              <div class="sel-val">X</div>
+            </button>
+            <button class="sel-btn" onclick="setInviteSel('AWAY',this)">
+              <div class="sel-label">Visita</div>
+              <div class="sel-val" id="inviteAwayLabel">—</div>
+            </button>
+          </div>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Monto a invitar (BC)</label>
+          <input class="form-input" type="number" id="inviteAmount" min="1" value="50">
+        </div>
+      </div>
+
+      <!-- Lista de amigos -->
+      <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.5rem;">
+        Seleccioná amigos a invitar:
+      </div>
+      <div id="friendsPickerList" style="max-height:220px;overflow-y:auto;">
+        <div style="text-align:center;color:var(--text-muted);padding:1rem;">
+          <div class="loading-spinner" style="margin:0 auto 0.5rem;"></div>Cargando amigos...
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:1rem;">
+        <button class="btn btn--ghost" onclick="backToStep2()" style="flex:1;">← Volver</button>
+        <button class="btn btn--orange btn--full" onclick="createP2PBet()" id="createBtn">
+          🚀 Crear sala
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════ SHEET: DETALLE DE APUESTA ════ -->
+<!-- ════════════════════════════════════════════
+     SHEET: INVITAR DESDE DETALLE
+     ════════════════════════════════════════════ -->
+<div class="sheet-bg" id="inviteSheet" onclick="maybeCloseSheet(event,'inviteSheet')">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h3 style="font-size:1.05rem;font-weight:700;">Invitar amigo</h3>
+      <button onclick="document.getElementById('inviteSheet').classList.remove('open')"
+              style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;">✕</button>
+    </div>
+    <div id="inviteSheetContent">
+      <div style="text-align:center;color:var(--text-muted);padding:2rem;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SHEET: DETALLE DE APUESTA
+     ════════════════════════════════════════════ -->
 <div class="sheet-bg" id="detailSheet" onclick="maybeCloseSheet(event,'detailSheet')">
   <div class="sheet">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
@@ -223,52 +398,91 @@
 <script>
   requireLogin();
 
-  let currentTab      = 'all';
-  let currentBalance  = 0;
-  let lockedBalance   = 0;
-  let createMatchId   = null;
-  let createMatchData = null;
-  let createSel       = null;
+  // ── Estado global ─────────────────────────────────────────────
+  let currentTab       = 'all';
+  let currentBalance   = 0;
+  let lockedBalance    = 0;
+  let createMatchId    = null;
+  let createMatchData  = null;
+  let createSel        = null;
+  let inviteSel        = null;
+  let selectedFriends  = new Set(); // IDs de amigos a invitar en paso 3
+  let currentBetId     = null;      // betId activo en el sheet de invitar
 
-  const myUser = Auth.getUser();
-  const SEL_LABEL = { HOME:'Local', DRAW:'Empate', AWAY:'Visita' };
-  const SEL_CLASS = { HOME:'sel-HOME', DRAW:'sel-DRAW', AWAY:'sel-AWAY' };
+  const myUser   = Auth.getUser();
+  const SEL_LABEL = { HOME: 'Local', DRAW: 'Empate', AWAY: 'Visita' };
 
+  // ── Inicialización ────────────────────────────────────────────
   async function init() {
     try {
-      const d = await VB.wallet.balance();
+      const d       = await VB.wallet.balance();
       currentBalance = parseFloat(d.wallet.balance);
       lockedBalance  = parseFloat(d.wallet.lockedBalance || 0);
       const available = currentBalance - lockedBalance;
-
       document.getElementById('balanceDisplay').textContent = available.toFixed(2) + ' BC';
       document.getElementById('lockedDisplay').textContent  = lockedBalance.toFixed(2) + ' BC';
     } catch(e) { console.error(e); }
 
-    // Lee params de URL (viene desde sports.html)
+    // Si viene desde sports.html con un partido preseleccionado
     const params = new URLSearchParams(window.location.search);
     if (params.get('matchId')) {
       openCreateSheet();
-      // Preselecciona el partido
-      setTimeout(() => preselectMatch(params.get('matchId'), params.get('home'), params.get('away'), params.get('league')), 500);
+      setTimeout(() => preselectMatch(
+        params.get('matchId'),
+        params.get('home'),
+        params.get('away'),
+        params.get('league')
+      ), 500);
     }
 
-    loadP2P();
+    // Si viene desde una notificación con una invitación específica
+    if (params.get('invitationId')) {
+      setTab('invitations', document.getElementById('tabInvitaciones'));
+    } else {
+      loadP2P();
+    }
+
+    cargarConteoInvitaciones();
   }
 
+  // ── Conteo de invitaciones pendientes para el badge ──────────
+  async function cargarConteoInvitaciones() {
+    try {
+      const { invitations } = await VB.p2p.myInvitations();
+      const count = invitations.length;
+      const badge = document.getElementById('invBadge');
+      if (count > 0) {
+        badge.textContent  = count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch(e) { /* silencioso */ }
+  }
+
+  // ── Cambio de tab ─────────────────────────────────────────────
   function setTab(tab, el) {
     currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
-    loadP2P();
+    if (tab === 'invitations') {
+      loadInvitations();
+    } else {
+      loadP2P();
+    }
   }
+
+  // ══════════════════════════════════════════════════════════════
+  // LISTA DE APUESTAS P2P
+  // ══════════════════════════════════════════════════════════════
 
   async function loadP2P() {
     const container = document.getElementById('p2pList');
-    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);"><div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>Cargando...</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>Cargando...</div>`;
 
     try {
-      const statusParam = currentTab === 'all' ? '' : currentTab;
+      const statusParam    = currentTab === 'all' ? '' : currentTab;
       const { participations } = await VB.p2p.myBets(statusParam);
 
       const active = participations.filter(p => ['OPEN','LOCKED'].includes(p.privateBet?.status));
@@ -331,7 +545,7 @@
 
             <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
               <div style="font-size:0.72rem;color:var(--text-muted);">
-                ${bet._count?.participants || bet.participants?.length || 1} participante(s) · Creado por ${bet.creator?.username || '?'}
+                ${bet._count?.participants || 1} participante(s) · por ${bet.creator?.username || '?'}
               </div>
               <div style="font-size:0.72rem;color:var(--text-muted);">
                 ${bet.status === 'OPEN' ? '🟢 Aceptando participantes' : bet.status === 'LOCKED' ? '🔒 Cerrada' : ''}
@@ -341,15 +555,140 @@
       }).filter(Boolean).join('');
 
     } catch (err) {
-      container.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Error: ${err.message}</div>`;
+      container.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+        Error: ${err.message}</div>`;
     }
   }
 
-  // ── CREAR P2P ─────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  // INVITACIONES RECIBIDAS
+  // ══════════════════════════════════════════════════════════════
+
+  async function loadInvitations() {
+    const container = document.getElementById('p2pList');
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>Cargando invitaciones...</div>`;
+
+    try {
+      const { invitations } = await VB.p2p.myInvitations();
+
+      // Actualiza badge
+      const badge = document.getElementById('invBadge');
+      if (invitations.length > 0) {
+        badge.textContent   = invitations.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      if (!invitations.length) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:2rem;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">📭</div>
+            <div style="font-weight:700;margin-bottom:0.5rem;">Sin invitaciones pendientes</div>
+            <div style="color:var(--text-secondary);font-size:0.88rem;">
+              Cuando un amigo te invite a una apuesta, aparecerá aquí.
+            </div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = invitations.map(inv => {
+        const bet = inv.privateBet;
+        const m   = bet?.match;
+        return `
+          <div class="invite-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:0.72rem;color:var(--purple-light);font-weight:700;margin-bottom:2px;">
+                  🎯 INVITACIÓN DE ${inv.inviter?.username?.toUpperCase() || '?'}
+                </div>
+                <div style="font-weight:700;font-size:0.95rem;">${bet?.title || '?'}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">
+                  ${m?.teamHome || '?'} vs ${m?.teamAway || '?'} · ${m?.league || '?'}
+                </div>
+              </div>
+              <span class="status-pill status-OPEN">Pendiente</span>
+            </div>
+
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+              <div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Tu selección asignada</div>
+                <div style="font-weight:700;color:var(--purple-light);">${SEL_LABEL[inv.selection] || inv.selection}</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Monto a apostar</div>
+                <div style="font-weight:700;color:var(--gold);">${parseFloat(inv.amount).toFixed(2)} BC</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Participantes actuales</div>
+                <div style="font-weight:700;">${bet?._count?.participants || '?'} / ${bet?.maxParticipants || '?'}</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Partido inicia</div>
+                <div style="font-weight:700;font-size:0.82rem;">${timeUntil(m?.startsAt)}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn--ghost btn--sm" style="flex:1;color:var(--red-accent);"
+                      onclick="responderInvitacion('${inv.id}','reject',this)">
+                ✕ Rechazar
+              </button>
+              <button class="btn btn--orange btn--sm" style="flex:2;"
+                      onclick="responderInvitacion('${inv.id}','accept',this)">
+                ✓ Aceptar — apostar ${parseFloat(inv.amount).toFixed(2)} BC
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+    } catch (err) {
+      container.innerHTML = `<div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+        Error: ${err.message}</div>`;
+    }
+  }
+
+  async function responderInvitacion(invitationId, action, btn) {
+    const card = btn.closest('.invite-card');
+    btn.disabled = true;
+    btn.textContent = action === 'accept' ? 'Aceptando...' : 'Rechazando...';
+
+    try {
+      const data = await VB.p2p.respondInvitation({ invitationId, action });
+      showToast(data.message, action === 'accept' ? 'success' : 'info');
+
+      // Animación de salida del card
+      if (card) { card.style.opacity = '0'; card.style.transform = 'translateY(-8px)'; card.style.transition = 'all 0.25s'; }
+      setTimeout(() => {
+        loadInvitations();
+        if (action === 'accept') {
+          // Actualiza los BetCoins visualmente
+          init();
+        }
+      }, 300);
+    } catch (err) {
+      showToast(err.message, 'error');
+      btn.disabled    = false;
+      btn.textContent = action === 'accept' ? '✓ Aceptar' : '✕ Rechazar';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // CREAR P2P — PASO 1: elegir partido
+  // ══════════════════════════════════════════════════════════════
+
   async function openCreateSheet() {
     document.getElementById('createSheet').classList.add('open');
     document.getElementById('createStep1').style.display = 'block';
     document.getElementById('createStep2').style.display = 'none';
+    document.getElementById('createStep3').style.display = 'none';
+    document.getElementById('createSheetTitle').textContent = 'Crear apuesta P2P';
+    createMatchId   = null;
+    createMatchData = null;
+    createSel       = null;
+    inviteSel       = null;
+    selectedFriends.clear();
     loadMatchPicker();
   }
 
@@ -360,8 +699,7 @@
 
       if (!matches.length) {
         el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem;">
-          No hay partidos disponibles. El admin debe crear partidos primero.
-        </div>`;
+          No hay partidos disponibles. El admin debe crear partidos primero.</div>`;
         return;
       }
 
@@ -369,7 +707,8 @@
         <div onclick="selectMatchForP2P(${JSON.stringify(m).split('"').join('&quot;')})"
              style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);
                     padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;"
-             onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+             onmouseover="this.style.borderColor='var(--purple)'"
+             onmouseout="this.style.borderColor='var(--border)'">
           <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:2px;">${m.league}</div>
           <div style="font-weight:700;">${m.teamHome} vs ${m.teamAway}</div>
           <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">${timeUntil(m.startsAt)}</div>
@@ -385,14 +724,18 @@
     try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch { return; }
     createMatchId   = m.id;
     createMatchData = m;
-    document.getElementById('selectedMatchLabel').textContent = `${m.teamHome} vs ${m.teamAway} · ${m.league}`;
-    document.getElementById('createHomeLabel').textContent    = m.teamHome;
-    document.getElementById('createAwayLabel').textContent    = m.teamAway;
+    document.getElementById('selectedMatchLabel').textContent  = `${m.teamHome} vs ${m.teamAway} · ${m.league}`;
+    document.getElementById('createHomeLabel').textContent     = m.teamHome;
+    document.getElementById('createAwayLabel').textContent     = m.teamAway;
+    document.getElementById('inviteHomeLabel').textContent     = m.teamHome;
+    document.getElementById('inviteAwayLabel').textContent     = m.teamAway;
     document.getElementById('p2pTitle').value = `${m.teamHome} vs ${m.teamAway}`;
+    document.getElementById('p2pMinAmount').value = '50';
+    document.getElementById('inviteAmount').value = '50';
+    createSel = null;
     document.getElementById('createStep1').style.display = 'none';
     document.getElementById('createStep2').style.display = 'block';
-    createSel = null;
-    document.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#createStep2 .sel-btn').forEach(b => b.classList.remove('active'));
   }
 
   function preselectMatch(id, home, away, league) {
@@ -403,30 +746,103 @@
   function backToStep1() {
     document.getElementById('createStep1').style.display = 'block';
     document.getElementById('createStep2').style.display = 'none';
+    document.getElementById('createStep3').style.display = 'none';
   }
 
   function setCreateSel(sel, el) {
     createSel = sel;
-    document.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#createStep2 .sel-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
   }
+
+  // ── PASO 2 → PASO 3: cargar amigos disponibles ───────────────
+
+  async function goToStep3() {
+    const title    = document.getElementById('p2pTitle').value.trim();
+    const myAmount = parseFloat(document.getElementById('p2pMyAmount').value);
+    const minAmount = parseFloat(document.getElementById('p2pMinAmount').value);
+    const maxP     = parseInt(document.getElementById('p2pMaxParticipants').value);
+
+    if (!createMatchId)           { showToast('Elegí un partido', 'error'); return; }
+    if (!createSel)               { showToast('Elegí tu selección', 'error'); return; }
+    if (!title)                   { showToast('Poné un nombre a la sala', 'error'); return; }
+    if (!myAmount || myAmount < 1){ showToast('Apuesta mínima: 1 BC', 'error'); return; }
+    if (myAmount > currentBalance - lockedBalance) { showToast('BC insuficientes', 'error'); return; }
+
+    document.getElementById('createStep2').style.display = 'none';
+    document.getElementById('createStep3').style.display = 'block';
+    document.getElementById('inviteAmount').value = minAmount || myAmount;
+    selectedFriends.clear();
+    inviteSel = null;
+    document.querySelectorAll('#inviteSelRow .sel-btn').forEach(b => b.classList.remove('active'));
+
+    // Carga amigos disponibles (como no existe la sala todavía, no filtramos por participantes)
+    const listEl = document.getElementById('friendsPickerList');
+    listEl.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:1rem;">
+      <div class="loading-spinner" style="margin:0 auto 0.5rem;"></div>Cargando amigos...</div>`;
+
+    try {
+      // Obtiene lista de amigos aceptados
+      const { friends: amigos } = await VB.friends.list();
+
+      if (!amigos || !amigos.length) {
+        listEl.innerHTML = `<div style="color:var(--text-muted);font-size:0.85rem;padding:0.75rem 0;">
+          No tenés amigos agregados todavía.
+          <a href="./friends.html" style="color:var(--purple-light);">Agregar amigos →</a></div>`;
+        return;
+      }
+
+      listEl.innerHTML = amigos.map(a => `
+        <div class="friend-item" id="fi_${a.id}" onclick="toggleFriendSelect('${a.id}')">
+          <input type="checkbox" id="chk_${a.id}" onclick="event.stopPropagation();toggleFriendSelect('${a.id}')">
+          <span style="font-size:1.2rem;">${a.avatarEmoji || '🎰'}</span>
+          <span style="font-weight:600;font-size:0.9rem;">${a.username}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      listEl.innerHTML = `<div style="color:var(--red-accent);padding:0.5rem;">Error: ${err.message}</div>`;
+    }
+  }
+
+  function backToStep2() {
+    document.getElementById('createStep2').style.display = 'block';
+    document.getElementById('createStep3').style.display = 'none';
+  }
+
+  function toggleFriendSelect(friendId) {
+    const item = document.getElementById(`fi_${friendId}`);
+    const chk  = document.getElementById(`chk_${friendId}`);
+    if (selectedFriends.has(friendId)) {
+      selectedFriends.delete(friendId);
+      item.classList.remove('selected');
+      if (chk) chk.checked = false;
+    } else {
+      selectedFriends.add(friendId);
+      item.classList.add('selected');
+      if (chk) chk.checked = true;
+    }
+  }
+
+  function setInviteSel(sel, el) {
+    inviteSel = sel;
+    document.querySelectorAll('#inviteSelRow .sel-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ── CREAR SALA + enviar invitaciones ─────────────────────────
 
   async function createP2PBet() {
     const title      = document.getElementById('p2pTitle').value.trim();
     const myAmount   = parseFloat(document.getElementById('p2pMyAmount').value);
     const minAmount  = parseFloat(document.getElementById('p2pMinAmount').value);
     const maxP       = parseInt(document.getElementById('p2pMaxParticipants').value);
-
-    if (!createMatchId)      { showToast('Elegí un partido', 'error'); return; }
-    if (!createSel)          { showToast('Elegí tu selección', 'error'); return; }
-    if (!title)              { showToast('Poné un nombre a la sala', 'error'); return; }
-    if (!myAmount || myAmount < 1) { showToast('Apuesta mínima: 1 BC', 'error'); return; }
-    if (myAmount > currentBalance - lockedBalance) { showToast('BC insuficientes', 'error'); return; }
+    const invAmount  = parseFloat(document.getElementById('inviteAmount').value);
 
     const btn = document.getElementById('createBtn');
-    btn.disabled = true; btn.textContent = 'Creando...';
+    btn.disabled = true; btn.textContent = 'Creando sala...';
 
     try {
+      // 1. Crea la apuesta
       const data = await VB.p2p.create({
         matchId:          createMatchId,
         title,
@@ -436,23 +852,197 @@
         creatorAmount:    myAmount,
       });
 
-      showToast(`Sala creada: ${title} 🎉`, 'success');
+      const newBetId = data.privateBet.id;
+
+      // 2. Envía invitaciones a los amigos seleccionados (si hay alguno y hay selección)
+      if (selectedFriends.size > 0) {
+        if (!inviteSel) {
+          showToast('Elegí una selección para los invitados', 'error');
+          btn.disabled = false; btn.textContent = '🚀 Crear sala';
+          return;
+        }
+
+        let enviadas = 0;
+        const amigosArr = Array.from(selectedFriends);
+        btn.textContent = `Enviando invitaciones...`;
+
+        for (const amigoId of amigosArr) {
+          try {
+            await VB.p2p.invite({
+              privateBetId: newBetId,
+              inviteeId:    amigoId,
+              selection:    inviteSel,
+              amount:       invAmount,
+            });
+            enviadas++;
+          } catch (e) {
+            console.warn(`[P2P] No se pudo invitar a ${amigoId}:`, e.message);
+          }
+        }
+
+        showToast(`Sala creada y ${enviadas} invitación(es) enviada(s) 🎉`, 'success');
+      } else {
+        showToast(`Sala "${title}" creada 🎉`, 'success');
+      }
+
       document.getElementById('createSheet').classList.remove('open');
 
-      // Actualiza balance
+      // Actualiza balance visual
       lockedBalance += myAmount;
-      document.getElementById('lockedDisplay').textContent = lockedBalance.toFixed(2) + ' BC';
-      document.getElementById('balanceDisplay').textContent = (currentBalance - lockedBalance).toFixed(2) + ' BC';
+      document.getElementById('lockedDisplay').textContent   = lockedBalance.toFixed(2) + ' BC';
+      document.getElementById('balanceDisplay').textContent  = (currentBalance - lockedBalance).toFixed(2) + ' BC';
 
       loadP2P();
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
-      btn.disabled = false; btn.textContent = 'Crear sala';
+      btn.disabled    = false;
+      btn.textContent = '🚀 Crear sala';
     }
   }
 
-  // ── DETALLE P2P ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  // SHEET: INVITAR DESDE DETALLE (para sala ya existente)
+  // ══════════════════════════════════════════════════════════════
+
+  async function openInviteSheet(betId) {
+    currentBetId = betId;
+    document.getElementById('inviteSheet').classList.add('open');
+    document.getElementById('inviteSheetContent').innerHTML =
+      '<div style="text-align:center;color:var(--text-muted);padding:2rem;"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+
+    try {
+      // Obtiene amigos disponibles para esta apuesta
+      const { friends: amigos, minAmount } = await VB.p2p.friendsToInvite(betId);
+
+      if (!amigos || !amigos.length) {
+        document.getElementById('inviteSheetContent').innerHTML = `
+          <div style="text-align:center;color:var(--text-muted);padding:1rem;">
+            <div style="font-size:1.5rem;margin-bottom:0.5rem;">👥</div>
+            No hay amigos disponibles para invitar.<br>
+            <span style="font-size:0.82rem;">Puede que ya estén todos invitados o participando.</span>
+          </div>`;
+        return;
+      }
+
+      // Selección y monto por defecto
+      let invSel2 = null;
+      let invAmt2 = minAmount;
+
+      document.getElementById('inviteSheetContent').innerHTML = `
+        <div style="display:grid;gap:0.75rem;margin-bottom:1rem;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Selección para el invitado</label>
+            <div style="display:flex;gap:6px;" id="invSel2Row">
+              <button class="sel-btn" onclick="setInvSel2('HOME',this)">
+                <div class="sel-label">Local</div><div class="sel-val" id="is2Home">—</div>
+              </button>
+              <button class="sel-btn" onclick="setInvSel2('DRAW',this)">
+                <div class="sel-label">Empate</div><div class="sel-val">X</div>
+              </button>
+              <button class="sel-btn" onclick="setInvSel2('AWAY',this)">
+                <div class="sel-label">Visita</div><div class="sel-val" id="is2Away">—</div>
+              </button>
+            </div>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Monto a invitar (BC)</label>
+            <input class="form-input" type="number" id="invAmt2Input" min="${minAmount}" value="${minAmount}" step="1">
+          </div>
+        </div>
+
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.5rem;">
+          Elegí a quién invitar:
+        </div>
+        <div id="inviteFriendsList" style="max-height:240px;overflow-y:auto;">
+          ${amigos.map(a => `
+            <div class="friend-item" id="fi2_${a.id}" onclick="toggleFriend2('${a.id}')">
+              <input type="checkbox" id="chk2_${a.id}" onclick="event.stopPropagation();toggleFriend2('${a.id}')">
+              <span style="font-size:1.2rem;">${a.avatarEmoji || '🎰'}</span>
+              <span style="font-weight:600;font-size:0.9rem;">${a.username}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <button class="btn btn--orange btn--full" style="margin-top:1rem;"
+                onclick="enviarInvitacionesDesdeDetalle()" id="sendInvBtn">
+          Enviar invitaciones
+        </button>
+      `;
+
+      // Actualiza etiquetas del partido
+      try {
+        const { bet } = await VB.p2p.get(betId);
+        if (bet?.match) {
+          document.getElementById('is2Home').textContent = bet.match.teamHome;
+          document.getElementById('is2Away').textContent = bet.match.teamAway;
+        }
+      } catch(e) { /* no crítico */ }
+
+      window._invSel2Friends = new Set();
+
+    } catch (err) {
+      document.getElementById('inviteSheetContent').innerHTML =
+        `<div style="color:var(--red-accent);padding:1rem;">Error: ${err.message}</div>`;
+    }
+  }
+
+  function setInvSel2(sel, el) {
+    window._invSel2 = sel;
+    document.querySelectorAll('#invSel2Row .sel-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function toggleFriend2(id) {
+    if (!window._invSel2Friends) window._invSel2Friends = new Set();
+    const item = document.getElementById(`fi2_${id}`);
+    const chk  = document.getElementById(`chk2_${id}`);
+    if (window._invSel2Friends.has(id)) {
+      window._invSel2Friends.delete(id);
+      item?.classList.remove('selected');
+      if (chk) chk.checked = false;
+    } else {
+      window._invSel2Friends.add(id);
+      item?.classList.add('selected');
+      if (chk) chk.checked = true;
+    }
+  }
+
+  async function enviarInvitacionesDesdeDetalle() {
+    const sel    = window._invSel2;
+    const amount = parseFloat(document.getElementById('invAmt2Input').value);
+    const amigos = Array.from(window._invSel2Friends || []);
+
+    if (!sel)          { showToast('Elegí una selección', 'error'); return; }
+    if (!amigos.length){ showToast('Elegí al menos un amigo', 'error'); return; }
+    if (!amount || amount < 1) { showToast('Monto inválido', 'error'); return; }
+
+    const btn = document.getElementById('sendInvBtn');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    let enviadas = 0;
+    for (const amigoId of amigos) {
+      try {
+        await VB.p2p.invite({
+          privateBetId: currentBetId,
+          inviteeId:    amigoId,
+          selection:    sel,
+          amount,
+        });
+        enviadas++;
+      } catch (e) {
+        console.warn(`[P2P] Invitación falló para ${amigoId}:`, e.message);
+      }
+    }
+
+    showToast(`${enviadas} invitación(es) enviada(s) ✓`, 'success');
+    document.getElementById('inviteSheet').classList.remove('open');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // DETALLE DE APUESTA P2P
+  // ══════════════════════════════════════════════════════════════
+
   async function openDetail(id) {
     document.getElementById('detailSheet').classList.add('open');
     document.getElementById('detailContent').innerHTML =
@@ -462,11 +1052,13 @@
       const { bet } = await VB.p2p.get(id);
       document.getElementById('detailTitle').textContent = bet.title;
 
-      const pool  = parseFloat(bet.totalPool);
-      const dist  = parseFloat(bet.distributable);
-      const comm  = parseFloat(bet.commission);
-      const isCreator = bet.creator?.username === myUser?.username;
-      const alreadyIn = bet.participants?.some(p => p.user?.username === myUser?.username);
+      const pool      = parseFloat(bet.totalPool);
+      const dist      = parseFloat(bet.distributable);
+      const isCreator  = bet.creator?.username === myUser?.username;
+      const alreadyIn  = bet.participants?.some(p => p.user?.username === myUser?.username);
+
+      const selColor = { HOME: '#60a5fa', DRAW: 'var(--gold)', AWAY: 'var(--red-accent)' };
+      const selBg    = { HOME: 'rgba(59,130,246,0.15)', DRAW: 'rgba(245,158,11,0.15)', AWAY: 'rgba(239,68,68,0.15)' };
 
       const partHtml = (bet.participants || []).map(p => `
         <div class="participant-row">
@@ -474,41 +1066,77 @@
             <span style="font-size:1.1rem;">${p.user?.avatarEmoji || '🎰'}</span>
             <span style="font-weight:600;font-size:0.88rem;">${p.user?.username || '?'}</span>
             <span style="font-size:0.72rem;padding:2px 7px;border-radius:99px;
-                         background:${p.selection==='HOME'?'rgba(59,130,246,0.15)':p.selection==='DRAW'?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.15)'};
-                         color:${p.selection==='HOME'?'#60a5fa':p.selection==='DRAW'?'var(--gold)':'var(--red-accent)'};">
+                         background:${selBg[p.selection]};color:${selColor[p.selection]};">
               ${SEL_LABEL[p.selection] || p.selection}
             </span>
           </div>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-weight:700;font-size:0.88rem;">${parseFloat(p.amount).toFixed(2)} BC</div>
-            ${p.status === 'WON' ? `<div style="font-size:0.75rem;color:var(--green-neon);">+${parseFloat(p.payout||0).toFixed(2)} BC</div>` : ''}
+            ${p.status === 'WON'  ? `<div style="font-size:0.75rem;color:var(--green-neon);">+${parseFloat(p.payout||0).toFixed(2)} BC ✓</div>` : ''}
             ${p.status === 'LOST' ? `<div style="font-size:0.72rem;color:var(--red-accent);">Perdió</div>` : ''}
           </div>
         </div>
       `).join('');
 
+      // Invitaciones pendientes (solo visible para el creador)
+      let invPendHtml = '';
+      if (isCreator && bet.invitations?.length > 0) {
+        invPendHtml = `
+          <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">
+              Invitaciones enviadas (${bet.invitations.length} pendiente(s))
+            </div>
+            ${bet.invitations.map(inv => `
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:0.82rem;">
+                <span>${inv.invitee?.avatarEmoji || '🎰'}</span>
+                <span>${inv.invitee?.username || '?'}</span>
+                <span style="margin-left:auto;font-size:0.7rem;padding:2px 7px;border-radius:99px;
+                             background:rgba(124,58,237,0.12);color:var(--purple-light);">Pendiente</span>
+              </div>
+            `).join('')}
+          </div>`;
+      }
+
+      // Acciones: unirse o invitar
       let actionsHtml = '';
       if (bet.status === 'OPEN' && !alreadyIn) {
         actionsHtml = `
           <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
             <div style="font-weight:600;margin-bottom:0.75rem;font-size:0.9rem;">Unirse a esta sala</div>
             <div style="display:flex;gap:6px;margin-bottom:0.75rem;">
-              <button class="sel-btn" onclick="setJoinSel('HOME',this)"><div class="sel-label">Local</div><div class="sel-val">${bet.match?.teamHome||'?'}</div></button>
-              <button class="sel-btn" onclick="setJoinSel('DRAW',this)"><div class="sel-label">Empate</div><div class="sel-val">X</div></button>
-              <button class="sel-btn" onclick="setJoinSel('AWAY',this)"><div class="sel-label">Visita</div><div class="sel-val">${bet.match?.teamAway||'?'}</div></button>
+              <button class="sel-btn" onclick="setJoinSel('HOME',this)">
+                <div class="sel-label">Local</div>
+                <div class="sel-val">${bet.match?.teamHome||'?'}</div>
+              </button>
+              <button class="sel-btn" onclick="setJoinSel('DRAW',this)">
+                <div class="sel-label">Empate</div>
+                <div class="sel-val">X</div>
+              </button>
+              <button class="sel-btn" onclick="setJoinSel('AWAY',this)">
+                <div class="sel-label">Visita</div>
+                <div class="sel-val">${bet.match?.teamAway||'?'}</div>
+              </button>
             </div>
             <div class="input-group" style="margin-bottom:0.75rem;">
-              <input class="form-input" type="number" id="joinAmount" min="${bet.minAmount}" value="${bet.minAmount}" step="1">
+              <input class="form-input" type="number" id="joinAmount"
+                     min="${bet.minAmount}" value="${bet.minAmount}" step="1">
               <span class="input-group__suffix">BC</span>
             </div>
-            <button class="btn btn--orange btn--full" onclick="joinBet('${bet.id}')">🤝 Unirme a la sala</button>
-          </div>`;
-      } else if (bet.status === 'OPEN' && isCreator) {
-        actionsHtml = `
-          <div style="margin-top:1rem;">
-            <button class="btn btn--ghost btn--full" style="color:var(--red-accent);" onclick="cancelBet('${bet.id}')">
-              ✕ Cancelar sala (reembolsa a todos)
+            <button class="btn btn--orange btn--full" onclick="joinBet('${bet.id}')">
+              🤝 Unirme a la sala
             </button>
+          </div>`;
+      } else if (bet.status === 'OPEN' && alreadyIn) {
+        // El usuario ya está adentro → solo puede invitar
+        actionsHtml = `
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <button class="btn btn--ghost btn--full" onclick="openInviteSheet('${bet.id}');document.getElementById('detailSheet').classList.remove('open');">
+              👥 Invitar amigo a esta sala
+            </button>
+            ${isCreator ? `<button class="btn btn--ghost btn--full" style="margin-top:8px;color:var(--red-accent);"
+                          onclick="cancelBet('${bet.id}')">
+              ✕ Cancelar sala (reembolsa a todos)
+            </button>` : ''}
           </div>`;
       }
 
@@ -517,8 +1145,8 @@
           <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">${bet.match?.league || '?'}</div>
           <div style="font-weight:700;">${bet.match?.teamHome || '?'} vs ${bet.match?.teamAway || '?'}</div>
           <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:3px;">
-            ${bet.status === 'OPEN' ? '🟢 Abierta · ' + timeUntil(bet.match?.startsAt) : ''}
-            ${bet.status === 'LOCKED' ? '🔒 Bloqueada — partido en curso' : ''}
+            ${bet.status === 'OPEN'     ? '🟢 Abierta · ' + timeUntil(bet.match?.startsAt) : ''}
+            ${bet.status === 'LOCKED'   ? '🔒 Bloqueada — partido en curso' : ''}
             ${bet.status === 'RESOLVED' ? '✅ Resuelta' : ''}
           </div>
         </div>
@@ -535,9 +1163,10 @@
         </div>
 
         <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">
-          Participantes (${(bet.participants||[]).length})
+          Participantes (${(bet.participants||[]).length} / ${bet.maxParticipants})
         </div>
         ${partHtml || '<div style="color:var(--text-muted);font-size:0.85rem;">Sin participantes aún</div>'}
+        ${invPendHtml}
         ${actionsHtml}
       `;
 
@@ -565,7 +1194,7 @@
       showToast(data.message, 'success');
       document.getElementById('detailSheet').classList.remove('open');
       lockedBalance += amount;
-      document.getElementById('lockedDisplay').textContent = lockedBalance.toFixed(2) + ' BC';
+      document.getElementById('lockedDisplay').textContent  = lockedBalance.toFixed(2) + ' BC';
       document.getElementById('balanceDisplay').textContent = (currentBalance - lockedBalance).toFixed(2) + ' BC';
       loadP2P();
     } catch (err) {
@@ -581,15 +1210,19 @@
       document.getElementById('detailSheet').classList.remove('open');
       loadP2P();
       init();
-    } catch (err) { showToast(err.message, 'error'); }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
+  // ── Helpers ───────────────────────────────────────────────────
   function maybeCloseSheet(e, id) {
     if (e.target === document.getElementById(id)) {
       document.getElementById(id).classList.remove('open');
     }
   }
 
+  // ── Arranque ──────────────────────────────────────────────────
   init();
 </script>
 </body>
