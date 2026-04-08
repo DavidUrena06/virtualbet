@@ -751,7 +751,26 @@
     }
   }
 
-  function selectMatchForP2P(matchObj) {
+ function selectMatchForP2P(matchObj) {
+    let m;
+    try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch { return; }
+    createMatchId   = m.id;
+    createMatchData = m;
+    document.getElementById('selectedMatchLabel').textContent = `${m.teamHome} vs ${m.teamAway} · ${m.league}`;
+    document.getElementById('createHomeLabel').textContent    = m.teamHome;
+    document.getElementById('createAwayLabel').textContent    = m.teamAway;
+    const ihl = document.getElementById('inviteHomeLabel');
+    const ial = document.getElementById('inviteAwayLabel');
+    if (ihl) ihl.textContent = m.teamHome;
+    if (ial) ial.textContent = m.teamAway;
+    document.getElementById('p2pTitle').value         = `${m.teamHome} vs ${m.teamAway}`;
+    document.getElementById('p2pMinAmount').value     = '50';
+    document.getElementById('inviteAmount').value     = '50';
+    createSel = null;
+    document.getElementById('createStep1').style.display = 'none';
+    document.getElementById('createStep2').style.display = 'block';
+    document.querySelectorAll('#createStep2 .sel-btn').forEach(b => b.classList.remove('active'));
+}
     let m;
     try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch { return; }
     createMatchId   = m.id;
