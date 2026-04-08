@@ -753,7 +753,7 @@
 
  function selectMatchForP2P(matchObj) {
     let m;
-    try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch { return; }
+    try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch(e) { return; }
     createMatchId   = m.id;
     createMatchData = m;
     document.getElementById('selectedMatchLabel').textContent = `${m.teamHome} vs ${m.teamAway} · ${m.league}`;
@@ -772,7 +772,7 @@
     document.querySelectorAll('#createStep2 .sel-btn').forEach(b => b.classList.remove('active'));
 }
     let m;
-    try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch { return; }
+    try { m = typeof matchObj === 'string' ? JSON.parse(matchObj) : matchObj; } catch(e) { return; }
     createMatchId   = m.id;
     createMatchData = m;
     document.getElementById('selectedMatchLabel').textContent  = `${m.teamHome} vs ${m.teamAway} · ${m.league}`;
