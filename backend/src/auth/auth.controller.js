@@ -37,7 +37,7 @@ const register = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     // Crea usuario + wallet en una sola transacción de BD
-    const welcomeBonus = parseFloat(process.env.WELCOME_BONUS) || 1000;
+    const welcomeBonus = parseFloat(process.env.WELCOME_BONUS) || 100; // Bonus de bienvenida configurable
 
     const user = await prisma.$transaction(async (tx) => {
       // Crea el usuario
