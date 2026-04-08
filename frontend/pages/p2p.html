@@ -313,32 +313,15 @@
 
       <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px;
                   margin-bottom:1rem;font-size:0.82rem;color:var(--text-secondary);">
-        Las invitaciones se enviarán al crear la sala. Podés invitar más desde el detalle después.
+        Cada invitado elegirá su propia selección y monto al aceptar.<br>
+        Podés sugerir un monto de referencia.
       </div>
 
-      <!-- Configuración de invitación: selección y monto por defecto -->
-      <div style="display:grid;gap:0.6rem;margin-bottom:1rem;">
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Selección para los invitados</label>
-          <div style="display:flex;gap:6px;" id="inviteSelRow">
-            <button class="sel-btn" onclick="setInviteSel('HOME',this)">
-              <div class="sel-label">Local</div>
-              <div class="sel-val" id="inviteHomeLabel">—</div>
-            </button>
-            <button class="sel-btn" onclick="setInviteSel('DRAW',this)">
-              <div class="sel-label">Empate</div>
-              <div class="sel-val">X</div>
-            </button>
-            <button class="sel-btn" onclick="setInviteSel('AWAY',this)">
-              <div class="sel-label">Visita</div>
-              <div class="sel-val" id="inviteAwayLabel">—</div>
-            </button>
-          </div>
-        </div>
-        <div class="form-group" style="margin:0;">
-          <label class="form-label">Monto a invitar (BC)</label>
-          <input class="form-input" type="number" id="inviteAmount" min="1" value="50">
-        </div>
+      <!-- Monto sugerido -->
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label class="form-label">Monto sugerido para los invitados (BC)</label>
+        <input class="form-input" type="number" id="inviteAmount" min="1" value="50"
+               placeholder="Mínimo de la sala por defecto">
       </div>
 
       <!-- Lista de amigos -->
@@ -596,8 +579,10 @@
       container.innerHTML = invitations.map(inv => {
         const bet = inv.privateBet;
         const m   = bet?.match;
+        const minAmt = parseFloat(bet?.minAmount || 1).toFixed(0);
+        const suggestedAmt = parseFloat(inv.amount || bet?.minAmount || 50).toFixed(0);
         return `
-          <div class="invite-card">
+          <div class="invite-card" id="invCard_${inv.id}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">
               <div style="min-width:0;flex:1;">
                 <div style="font-size:0.72rem;color:var(--purple-light);font-weight:700;margin-bottom:2px;">
@@ -613,20 +598,42 @@
 
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
               <div>
-                <div style="font-size:0.65rem;color:var(--text-muted);">Tu selección asignada</div>
-                <div style="font-weight:700;color:var(--purple-light);">${SEL_LABEL[inv.selection] || inv.selection}</div>
-              </div>
-              <div>
-                <div style="font-size:0.65rem;color:var(--text-muted);">Monto a apostar</div>
-                <div style="font-weight:700;color:var(--gold);">${parseFloat(inv.amount).toFixed(2)} BC</div>
-              </div>
-              <div>
-                <div style="font-size:0.65rem;color:var(--text-muted);">Participantes actuales</div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Participantes</div>
                 <div style="font-weight:700;">${bet?._count?.participants || '?'} / ${bet?.maxParticipants || '?'}</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;color:var(--text-muted);">Mínimo para entrar</div>
+                <div style="font-weight:700;color:var(--gold);">${minAmt} BC</div>
               </div>
               <div>
                 <div style="font-size:0.65rem;color:var(--text-muted);">Partido inicia</div>
                 <div style="font-weight:700;font-size:0.82rem;">${timeUntil(m?.startsAt)}</div>
+              </div>
+            </div>
+
+            <!-- UI para elegir selección y monto al aceptar -->
+            <div id="acceptForm_${inv.id}" style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
+              <div style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">
+                Elegí tu selección y monto:
+              </div>
+              <div style="display:flex;gap:6px;margin-bottom:8px;" id="selRow_${inv.id}">
+                <button class="sel-btn" onclick="setInvAcceptSel('${inv.id}','HOME',this)">
+                  <div class="sel-label">Local</div>
+                  <div class="sel-val" style="font-size:0.78rem;">${m?.teamHome || 'Local'}</div>
+                </button>
+                <button class="sel-btn" onclick="setInvAcceptSel('${inv.id}','DRAW',this)">
+                  <div class="sel-label">Empate</div>
+                  <div class="sel-val">X</div>
+                </button>
+                <button class="sel-btn" onclick="setInvAcceptSel('${inv.id}','AWAY',this)">
+                  <div class="sel-label">Visita</div>
+                  <div class="sel-val" style="font-size:0.78rem;">${m?.teamAway || 'Visita'}</div>
+                </button>
+              </div>
+              <div class="input-group">
+                <input class="form-input" type="number" id="acceptAmt_${inv.id}"
+                       min="${minAmt}" value="${suggestedAmt}" step="1">
+                <span class="input-group__suffix">BC</span>
               </div>
             </div>
 
@@ -637,7 +644,7 @@
               </button>
               <button class="btn btn--orange btn--sm" style="flex:2;"
                       onclick="responderInvitacion('${inv.id}','accept',this)">
-                ✓ Aceptar — apostar ${parseFloat(inv.amount).toFixed(2)} BC
+                ✓ Confirmar y apostar
               </button>
             </div>
           </div>`;
@@ -649,28 +656,53 @@
     }
   }
 
+  // Mapa de selecciones elegidas por invitación (invId → 'HOME'|'DRAW'|'AWAY')
+  const invAcceptSel = {};
+
+  function setInvAcceptSel(invId, sel, el) {
+    invAcceptSel[invId] = sel;
+    document.querySelectorAll(`#selRow_${invId} .sel-btn`).forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
   async function responderInvitacion(invitationId, action, btn) {
+    // Al aceptar: valida selección y monto
+    if (action === 'accept') {
+      const sel    = invAcceptSel[invitationId];
+      const amount = parseFloat(document.getElementById(`acceptAmt_${invitationId}`)?.value);
+
+      if (!sel)               { showToast('Elegí tu selección antes de aceptar', 'error'); return; }
+      if (!amount || amount < 1) { showToast('Monto inválido', 'error'); return; }
+      if (amount > currentBalance - lockedBalance) { showToast('BC insuficientes', 'error'); return; }
+    }
+
     const card = btn.closest('.invite-card');
     btn.disabled = true;
-    btn.textContent = action === 'accept' ? 'Aceptando...' : 'Rechazando...';
+    btn.textContent = action === 'accept' ? 'Confirmando...' : 'Rechazando...';
 
     try {
-      const data = await VB.p2p.respondInvitation({ invitationId, action });
+      const payload = { invitationId, action };
+      if (action === 'accept') {
+        payload.selection = invAcceptSel[invitationId];
+        payload.amount    = parseFloat(document.getElementById(`acceptAmt_${invitationId}`).value);
+      }
+
+      const data = await VB.p2p.respondInvitation(payload);
       showToast(data.message, action === 'accept' ? 'success' : 'info');
 
-      // Animación de salida del card
-      if (card) { card.style.opacity = '0'; card.style.transform = 'translateY(-8px)'; card.style.transition = 'all 0.25s'; }
+      if (card) {
+        card.style.opacity   = '0';
+        card.style.transform = 'translateY(-8px)';
+        card.style.transition = 'all 0.25s';
+      }
       setTimeout(() => {
         loadInvitations();
-        if (action === 'accept') {
-          // Actualiza los BetCoins visualmente
-          init();
-        }
+        if (action === 'accept') init(); // refresca balance
       }, 300);
     } catch (err) {
       showToast(err.message, 'error');
       btn.disabled    = false;
-      btn.textContent = action === 'accept' ? '✓ Aceptar' : '✕ Rechazar';
+      btn.textContent = action === 'accept' ? '✓ Confirmar y apostar' : '✕ Rechazar';
     }
   }
 
@@ -854,25 +886,19 @@
 
       const newBetId = data.privateBet.id;
 
-      // 2. Envía invitaciones a los amigos seleccionados (si hay alguno y hay selección)
+      // 2. Envía invitaciones a los amigos seleccionados (si hay alguno)
       if (selectedFriends.size > 0) {
-        if (!inviteSel) {
-          showToast('Elegí una selección para los invitados', 'error');
-          btn.disabled = false; btn.textContent = '🚀 Crear sala';
-          return;
-        }
+        const invAmount  = parseFloat(document.getElementById('inviteAmount').value);
+        const amigosArr  = Array.from(selectedFriends);
+        btn.textContent  = `Enviando invitaciones...`;
 
         let enviadas = 0;
-        const amigosArr = Array.from(selectedFriends);
-        btn.textContent = `Enviando invitaciones...`;
-
         for (const amigoId of amigosArr) {
           try {
             await VB.p2p.invite({
-              privateBetId: newBetId,
-              inviteeId:    amigoId,
-              selection:    inviteSel,
-              amount:       invAmount,
+              privateBetId:    newBetId,
+              inviteeId:       amigoId,
+              suggestedAmount: invAmount || undefined,
             });
             enviadas++;
           } catch (e) {
@@ -926,29 +952,18 @@
       }
 
       // Selección y monto por defecto
-      let invSel2 = null;
       let invAmt2 = minAmount;
 
       document.getElementById('inviteSheetContent').innerHTML = `
-        <div style="display:grid;gap:0.75rem;margin-bottom:1rem;">
-          <div class="form-group" style="margin:0;">
-            <label class="form-label">Selección para el invitado</label>
-            <div style="display:flex;gap:6px;" id="invSel2Row">
-              <button class="sel-btn" onclick="setInvSel2('HOME',this)">
-                <div class="sel-label">Local</div><div class="sel-val" id="is2Home">—</div>
-              </button>
-              <button class="sel-btn" onclick="setInvSel2('DRAW',this)">
-                <div class="sel-label">Empate</div><div class="sel-val">X</div>
-              </button>
-              <button class="sel-btn" onclick="setInvSel2('AWAY',this)">
-                <div class="sel-label">Visita</div><div class="sel-val" id="is2Away">—</div>
-              </button>
-            </div>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label class="form-label">Monto a invitar (BC)</label>
-            <input class="form-input" type="number" id="invAmt2Input" min="${minAmount}" value="${minAmount}" step="1">
-          </div>
+        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px;
+                    margin-bottom:1rem;font-size:0.82rem;color:var(--text-secondary);">
+          Cada invitado elegirá su propia selección al aceptar.
+          Podés sugerir un monto de referencia.
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label">Monto sugerido (BC) — mínimo: ${minAmount}</label>
+          <input class="form-input" type="number" id="invAmt2Input"
+                 min="${minAmount}" value="${minAmount}" step="1">
         </div>
 
         <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.5rem;">
@@ -969,17 +984,6 @@
           Enviar invitaciones
         </button>
       `;
-
-      // Actualiza etiquetas del partido
-      try {
-        const { bet } = await VB.p2p.get(betId);
-        if (bet?.match) {
-          document.getElementById('is2Home').textContent = bet.match.teamHome;
-          document.getElementById('is2Away').textContent = bet.match.teamAway;
-        }
-      } catch(e) { /* no crítico */ }
-
-      window._invSel2Friends = new Set();
 
     } catch (err) {
       document.getElementById('inviteSheetContent').innerHTML =
@@ -1009,12 +1013,10 @@
   }
 
   async function enviarInvitacionesDesdeDetalle() {
-    const sel    = window._invSel2;
     const amount = parseFloat(document.getElementById('invAmt2Input').value);
     const amigos = Array.from(window._invSel2Friends || []);
 
-    if (!sel)          { showToast('Elegí una selección', 'error'); return; }
-    if (!amigos.length){ showToast('Elegí al menos un amigo', 'error'); return; }
+    if (!amigos.length) { showToast('Elegí al menos un amigo', 'error'); return; }
     if (!amount || amount < 1) { showToast('Monto inválido', 'error'); return; }
 
     const btn = document.getElementById('sendInvBtn');
@@ -1024,10 +1026,9 @@
     for (const amigoId of amigos) {
       try {
         await VB.p2p.invite({
-          privateBetId: currentBetId,
-          inviteeId:    amigoId,
-          selection:    sel,
-          amount,
+          privateBetId:    currentBetId,
+          inviteeId:       amigoId,
+          suggestedAmount: amount,
         });
         enviadas++;
       } catch (e) {
