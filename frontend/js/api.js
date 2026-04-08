@@ -107,12 +107,18 @@ const VB = {
 
   // P2P — ruta: /api/p2p/*
   p2p: {
-    create:  (d)   => api.post('/p2p/create',  d),
-    join:    (d)   => api.post('/p2p/join',    d),
-    cancel:  (d)   => api.post('/p2p/cancel',  d),
-    get:     (id)  => api.get(`/p2p/${id}`),
-    myBets:  (s='')=> api.get(`/p2p/my?status=${s}`),
-  },
+  myBets:           (status) => get(`/p2p/my${status ? '?status='+status : ''}`),
+  create:           (data)   => post('/p2p/create', data),
+  join:             (data)   => post('/p2p/join', data),
+  cancel:           (data)   => post('/p2p/cancel', data),
+  get:              (id)     => get(`/p2p/${id}`),
+ 
+  // ── NUEVOS: Sistema de invitaciones ──────────────────────────
+  invite:           (data)   => post('/p2p/invite', data),
+  respondInvitation:(data)   => post('/p2p/invite/respond', data),
+  myInvitations:    ()       => get('/p2p/invitations'),
+  friendsToInvite:  (betId)  => get(`/p2p/${betId}/friends`),
+},
 
   // Perfil — ruta: /api/user/*
   user: {

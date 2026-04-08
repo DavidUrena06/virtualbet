@@ -1,5 +1,5 @@
-// backend/src/p2p/p2p.routes.js
-// IMPORTANTE: rutas estáticas (/my, /create, /join, /cancel) SIEMPRE antes de /:id
+// p2p/p2p.routes.js
+// IMPORTANTE: rutas estáticas SIEMPRE antes de /:id
 // Si /:id va primero, Express captura /my como id="my" y da 404
 
 const express = require('express');
@@ -8,6 +8,10 @@ const { requireAuth } = require('../middleware/auth.middleware');
 const {
   createPrivateBet,
   joinPrivateBet,
+  inviteFriend,
+  respondToInvitation,
+  getMyInvitations,
+  getFriendsToInvite,
   resolvePrivateBet,
   getPrivateBet,
   getMyPrivateBets,
@@ -17,10 +21,15 @@ const {
 const router = express.Router();
 router.use(requireAuth);
 
-// ── Rutas estáticas primero (CRÍTICO) ─────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// RUTAS ESTÁTICAS PRIMERO (CRÍTICO — no mover abajo de /:id)
+// ══════════════════════════════════════════════════════════════
 
 // GET /api/p2p/my?status=OPEN|LOCKED|RESOLVED
 router.get('/my', getMyPrivateBets);
+
+// GET /api/p2p/invitations — mis invitaciones pendientes recibidas
+router.get('/invitations', getMyInvitations);
 
 // POST /api/p2p/create
 router.post('/create', [
@@ -43,9 +52,30 @@ router.post('/cancel', [
   body('privateBetId').notEmpty().withMessage('privateBetId requerido'),
 ], cancelPrivateBet);
 
-// ── Ruta dinámica al final (SIEMPRE última) ───────────────────────────────
+// POST /api/p2p/invite — invitar amigo a una apuesta
+router.post('/invite', [
+  body('privateBetId').notEmpty().withMessage('privateBetId requerido'),
+  body('inviteeId').notEmpty().withMessage('inviteeId requerido'),
+  body('selection').isIn(['HOME', 'DRAW', 'AWAY']).withMessage('Selección inválida'),
+  body('amount').isFloat({ min: 1 }).withMessage('Mínimo: 1 BC'),
+], inviteFriend);
 
-// GET /api/p2p/:id
+// POST /api/p2p/invite/respond — aceptar o rechazar invitación
+router.post('/invite/respond', [
+  body('invitationId').notEmpty().withMessage('invitationId requerido'),
+  body('action').isIn(['accept', 'reject']).withMessage('Acción inválida: accept o reject'),
+], respondToInvitation);
+
+// ══════════════════════════════════════════════════════════════
+// RUTAS CON PARÁMETRO (SIEMPRE AL FINAL)
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/p2p/:betId/friends — amigos disponibles para invitar
+router.get('/:betId/friends', [
+  param('betId').isUUID().withMessage('ID de apuesta inválido'),
+], getFriendsToInvite);
+
+// GET /api/p2p/:id — detalle de apuesta
 router.get('/:id', [
   param('id').isUUID().withMessage('ID de apuesta inválido'),
 ], getPrivateBet);

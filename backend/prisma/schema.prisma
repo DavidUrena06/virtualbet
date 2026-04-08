@@ -1,6 +1,6 @@
-// VirtualBet — Schema completo v2
+// VirtualBet — Schema completo v3
 // Moneda: BetCoins (BC)
-// Incluye: Sportsbook, Sistema Social, Apuestas P2P
+// Incluye: Sportsbook, Sistema Social, Apuestas P2P + Sistema de Invitaciones
 
 generator client {
   provider = "prisma-client-js"
@@ -40,6 +40,9 @@ model User {
   adminLogsTarget          AdminLog[]                @relation("TargetUser")
   coinSchedules            CoinSchedule[]
   notifications            Notification[]
+  // Invitaciones P2P enviadas y recibidas
+  p2pInvitationsSent       P2PInvitation[]           @relation("InvitationInviter")
+  p2pInvitationsReceived   P2PInvitation[]           @relation("InvitationInvitee")
 
   @@map("users")
 }
@@ -224,6 +227,7 @@ model PrivateBet {
   creator      User                    @relation("PrivateBetCreator", fields: [creatorId], references: [id])
   match        Match                   @relation(fields: [matchId], references: [id])
   participants PrivateBetParticipant[]
+  invitations  P2PInvitation[]
 
   @@map("private_bets")
 }
@@ -258,6 +262,37 @@ enum ParticipantStatus {
   WON
   LOST
   REFUNDED
+}
+
+// ══════════════════════════════════════════════════════════════
+// INVITACIONES P2P
+// ══════════════════════════════════════════════════════════════
+
+model P2PInvitation {
+  id           String              @id @default(uuid())
+  privateBetId String              @map("private_bet_id")
+  inviterId    String              @map("inviter_id")
+  inviteeId    String              @map("invitee_id")
+  selection    BetSelection
+  amount       Decimal             @db.Decimal(18, 2)
+  status       InvitationStatus    @default(PENDING)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  respondedAt  DateTime?           @map("responded_at")
+
+  privateBet PrivateBet @relation(fields: [privateBetId], references: [id], onDelete: Cascade)
+  inviter    User       @relation("InvitationInviter", fields: [inviterId], references: [id])
+  invitee    User       @relation("InvitationInvitee", fields: [inviteeId], references: [id])
+
+  // Un usuario solo puede tener UNA invitación pendiente por apuesta
+  @@unique([privateBetId, inviteeId])
+  @@map("p2p_invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
 // ══════════════════════════════════════════════════════════════
