@@ -6,184 +6,326 @@
   <title>VirtualBet — Mines</title>
   <link rel="stylesheet" href="../../css/main.css">
   <style>
-    /* ── Tablero 5×5 ─────────────────────────────────────────────── */
-    .mines-board {
+    /* ══════════════════════════════════════════════════════════════
+       LAYOUT — Sidebar fija + Stage del juego (Stake-style)
+    ══════════════════════════════════════════════════════════════ */
+    .game-shell {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      margin: 1.5rem 0;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - var(--navbar-h));
+      background: #0f1117;
     }
-    .mine-cell {
-      aspect-ratio: 1;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: var(--bg-secondary);
-      font-size: 1.6rem;
+
+    .game-sidebar {
+      background: #151822;
+      border-right: 1px solid #1e2130;
+      padding: 20px 16px;
       display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .game-stage {
+      background: #0f1117;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-      user-select: none;
-    }
-    .mine-cell:hover:not(.revealed):not(.disabled) {
-      background: var(--bg-card-hover);
-      border-color: var(--purple);
-      transform: scale(1.05);
-    }
-    .mine-cell.revealed-safe {
-      background: rgba(0,255,136,0.12);
-      border-color: var(--green-neon);
-      cursor: default;
-      animation: cellReveal 0.3s ease;
-    }
-    .mine-cell.revealed-mine {
-      background: rgba(239,68,68,0.2);
-      border-color: var(--red-accent);
-      cursor: default;
-      animation: mineExplode 0.4s ease;
-    }
-    .mine-cell.hint {
-      background: rgba(124,58,237,0.08);
-      border-color: var(--purple);
-    }
-    .mine-cell.disabled {
-      cursor: default;
-      opacity: 0.7;
-    }
-    @keyframes cellReveal {
-      0%   { transform: scale(0.8); opacity: 0.5; }
-      60%  { transform: scale(1.1); }
-      100% { transform: scale(1);   opacity: 1; }
-    }
-    @keyframes mineExplode {
-      0%   { transform: scale(1); }
-      20%  { transform: scale(1.3) rotate(-5deg); }
-      40%  { transform: scale(0.9) rotate(5deg); }
-      60%  { transform: scale(1.1); }
-      100% { transform: scale(1); }
+      gap: 20px;
     }
 
-    /* ── Multiplicador flotante ───────────────────────────────────── */
-    .mult-display {
-      text-align: center;
-      padding: 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      margin-bottom: 1rem;
-    }
-    .mult-display .mult-value {
-      font-size: 2.5rem;
-      font-weight: 900;
-      color: var(--green-neon);
-      line-height: 1;
-      transition: all 0.2s ease;
-    }
-    .mult-display .mult-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
+    /* ── Tipografía e inputs del sidebar ──────────────────────────── */
+    .sb-label {
+      font-size: 11px;
+      color: #6b7280;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-top: 4px;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
-    /* ── Selector de minas ─────────────────────────────────────────── */
+    .sb-group { display: flex; flex-direction: column; }
+
+    .sb-input-wrap { position: relative; display: flex; align-items: center; }
+    .sb-input {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #1e2130;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 12px 38px 12px 14px;
+      outline: none;
+      font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      transition: border-color 0.15s ease;
+    }
+    .sb-input:focus { border-color: #00e676; }
+    .sb-input::-webkit-outer-spin-button,
+    .sb-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sb-input[type=number] { -moz-appearance: textfield; }
+    .sb-input-suffix {
+      position: absolute;
+      right: 12px;
+      font-size: 1.05rem;
+      pointer-events: none;
+      color: #6b7280;
+    }
+
+    .sb-quick {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .sb-quick button {
+      background: #1e2130;
+      border: none;
+      color: #cbd5e1;
+      font-weight: 600;
+      font-size: 0.78rem;
+      padding: 8px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+    .sb-quick button:hover { background: #2a2f42; color: #fff; }
+
+    /* ── Selector de cantidad de minas ────────────────────────────── */
     .mines-selector {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 6px;
     }
     .mines-opt {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 6px 4px;
+      background: #1e2130;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 9px 0;
       text-align: center;
       cursor: pointer;
-      transition: all 0.15s ease;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
+      color: #cbd5e1;
+      transition: all 0.15s ease;
+      user-select: none;
     }
-    .mines-opt:hover { border-color: var(--border-hover); }
+    .mines-opt:hover { background: #2a2f42; }
     .mines-opt.selected {
-      background: rgba(124,58,237,0.15);
-      border-color: var(--purple);
-      color: var(--purple-light);
+      background: rgba(0,230,118,0.12);
+      border-color: #00e676;
+      color: #00e676;
+    }
+
+    /* ── Botón principal — pegado al fondo del sidebar ──────────── */
+    .sb-action { margin-top: auto; }
+    .btn-play {
+      width: 100%;
+      background: #00e676;
+      color: #000;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+    .btn-play:hover:not(:disabled) {
+      background: #00ff88;
+      box-shadow: 0 4px 16px rgba(0,230,118,0.3);
+    }
+    .btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Multiplier display del stage ─────────────────────────────── */
+    .mult-display {
+      text-align: center;
+      padding: 16px 28px;
+      background: #151822;
+      border: 1px solid #1e2130;
+      border-radius: 12px;
+      min-width: 260px;
+    }
+    .mult-display .mult-value {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #00e676;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.2s ease;
+    }
+    .mult-display .mult-label {
+      font-size: 0.7rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 6px;
+    }
+    .mult-display .payout-line {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      margin-top: 8px;
+    }
+    .mult-display .payout-line strong { color: #00e676; }
+
+    /* ── Tablero 5×5 ──────────────────────────────────────────────── */
+    .mines-board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 460px;
+      aspect-ratio: 1;
+    }
+    .mine-cell {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      background: #1a1f2e;
+      border: 1px solid #1e2130;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.9rem;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+    .mine-cell:hover:not(.revealed-safe):not(.revealed-mine):not(.disabled) {
+      background: #232a3d;
+      border-color: #00e676;
+      transform: scale(1.04);
+    }
+    .mine-cell.revealed-safe {
+      background: #0d2318;
+      border-color: #00e676;
+      cursor: default;
+      animation: gemReveal 0.32s ease;
+    }
+    .mine-cell.revealed-mine {
+      background: #2a0d0d;
+      border-color: #ef4444;
+      cursor: default;
+      animation: mineShake 0.5s cubic-bezier(.36,.07,.19,.97);
+    }
+    .mine-cell.disabled { cursor: default; opacity: 0.55; }
+    .mine-cell.hint {
+      background: rgba(239,68,68,0.06);
+      border-color: rgba(239,68,68,0.25);
+      opacity: 0.55;
+    }
+
+    @keyframes gemReveal {
+      0%   { transform: scale(0.7); opacity: 0.3; }
+      60%  { transform: scale(1.12); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes mineShake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+      40%, 60% { transform: translate3d(5px, 0, 0); }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       MOBILE — Stack vertical: juego arriba, controles abajo
+    ══════════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .game-shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+      .game-sidebar {
+        order: 2;
+        border-right: none;
+        border-top: 1px solid #1e2130;
+        padding: 18px 16px;
+      }
+      .game-stage {
+        order: 1;
+        padding: 18px 14px;
+      }
+      .mines-board { max-width: 340px; }
+      .sb-action { margin-top: 12px; }
+      .mult-display { padding: 12px 18px; min-width: 0; width: 100%; max-width: 340px; }
+      .mult-display .mult-value { font-size: 2rem; }
     }
   </style>
 </head>
 <body>
+
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
-<main class="container page">
-  <div class="game-area">
+<div class="game-shell">
+
+  <!-- ────────── Sidebar de controles ────────── -->
+  <aside class="game-sidebar">
+
+    <!-- Cantidad de minas -->
+    <div class="sb-group" id="minesControl">
+      <div class="sb-label">Cantidad de minas</div>
+      <div class="mines-selector">
+        <div class="mines-opt selected" onclick="setMines(1)">1</div>
+        <div class="mines-opt" onclick="setMines(3)">3</div>
+        <div class="mines-opt" onclick="setMines(5)">5</div>
+        <div class="mines-opt" onclick="setMines(10)">10</div>
+        <div class="mines-opt" onclick="setMines(20)">20</div>
+      </div>
+      <div style="font-size:11px;color:#6b7280;margin-top:8px;letter-spacing:0.3px;">
+        Inicial 1 celda: <strong style="color:#ffb020;" id="firstMultHint">—</strong>
+      </div>
+    </div>
+
+    <!-- Apuesta -->
+    <div class="sb-group" id="betControl">
+      <div class="sb-label">Apuesta</div>
+      <div class="sb-input-wrap">
+        <input class="sb-input" type="number" id="betAmount"
+               min="1" value="10" step="1" oninput="updateHint()">
+        <span class="sb-input-suffix">🪙</span>
+      </div>
+      <div class="sb-quick">
+        <button onclick="setBet(10)">10</button>
+        <button onclick="setBet(50)">50</button>
+        <button onclick="setBet(100)">100</button>
+        <button onclick="setMaxBet()">MAX</button>
+      </div>
+    </div>
+
+    <!-- Botón principal — pegado al fondo -->
+    <div class="sb-action" id="actionArea">
+      <button class="btn-play" onclick="startGame()">
+        💣 Jugar
+      </button>
+    </div>
+  </aside>
+
+  <!-- ────────── Stage del juego ────────── -->
+  <section class="game-stage">
 
     <!-- Multiplicador actual -->
     <div class="mult-display">
-      <div class="mult-value" id="multDisplay">1.00x</div>
+      <div class="mult-value" id="multDisplay">—</div>
       <div class="mult-label" id="multLabel">Ganancia potencial</div>
-      <div style="font-size:0.9rem;color:var(--text-secondary);margin-top:6px;">
-        Ganás: <strong style="color:var(--green-neon);" id="payoutDisplay">0.00 🪙</strong>
+      <div class="payout-line">
+        Ganás: <strong id="payoutDisplay">0.00 🪙</strong>
       </div>
     </div>
 
     <!-- Tablero 5×5 -->
     <div class="mines-board" id="board"></div>
-
-    <!-- Controles -->
-    <div class="bet-controls">
-
-      <!-- Cantidad de minas -->
-      <div class="form-group" id="minesControl">
-        <label class="form-label">Cantidad de minas</label>
-        <div class="mines-selector">
-          <div class="mines-opt selected" onclick="setMines(1)">1</div>
-          <div class="mines-opt" onclick="setMines(3)">3</div>
-          <div class="mines-opt" onclick="setMines(5)">5</div>
-          <div class="mines-opt" onclick="setMines(10)">10</div>
-          <div class="mines-opt" onclick="setMines(20)">20</div>
-        </div>
-        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
-          Multiplicador inicial con 1 celda:
-          <strong style="color:var(--gold);" id="firstMultHint">—</strong>
-        </div>
-      </div>
-
-      <!-- Monto -->
-      <div class="form-group" id="betControl">
-        <label class="form-label">Apuesta</label>
-        <div class="input-group">
-          <input class="form-input" type="number" id="betAmount"
-                 min="1" max="10000" value="10" step="1" oninput="updateHint()">
-          <span class="input-group__suffix">🪙</span>
-        </div>
-        <div class="multiplier-presets" style="margin-top:8px;">
-          <button onclick="setBet(10)">10</button>
-          <button onclick="setBet(50)">50</button>
-          <button onclick="setBet(100)">100</button>
-          <button onclick="setBet(500)">500</button>
-          <button onclick="setHalfBet()">½</button>
-          <button onclick="setMaxBet()">MAX</button>
-        </div>
-      </div>
-
-      <!-- Botones de acción -->
-      <div id="actionArea">
-        <button class="btn btn--orange btn--full btn--lg" onclick="startGame()">
-          💣 Jugar
-        </button>
-      </div>
-
-    </div>
-  </div>
-</main>
+  </section>
+</div>
 
 <script src="../../js/api.js"></script>
 <script src="../js/navbar.js"></script>
@@ -218,7 +360,7 @@
   }
 
   function setBet(n) {
-    document.getElementById('betAmount').value = Math.min(n, 10000);
+    document.getElementById('betAmount').value = n;
     betAmt = n;
     updateHint();
   }
@@ -226,7 +368,7 @@
     const c = parseFloat(document.getElementById('betAmount').value) || 10;
     setBet(Math.max(1, Math.floor(c / 2)));
   }
-  function setMaxBet() { setBet(Math.min(currentBalance, 10000)); }
+  function setMaxBet() { setBet(Math.max(1, Math.floor(currentBalance))); }
 
   // Calcula multiplicador esperado con X reveals
   function calcMult(reveals) {
@@ -256,7 +398,8 @@
       const cell = document.createElement('div');
       cell.className = 'mine-cell' + (disabled ? ' disabled' : '');
       cell.dataset.index = i;
-      cell.textContent = '💎';
+      // Celdas arrancan vacías; solo muestran 💎/💣 al revelarse
+      cell.textContent = '';
       if (!disabled) cell.onclick = () => clickCell(i);
       board.appendChild(cell);
     }
@@ -286,8 +429,8 @@
 
       // Muestra botón de cashout
       document.getElementById('actionArea').innerHTML = `
-        <button class="btn btn--green btn--full btn--lg" onclick="cashout()" id="cashoutBtn" disabled>
-          💸 Cobrar (destapá al menos 1)
+        <button class="btn-play" onclick="cashout()" id="cashoutBtn" disabled>
+          💸 Cobrar (destapá ≥1)
         </button>
       `;
 
@@ -335,7 +478,7 @@
         });
 
         document.getElementById('multDisplay').textContent = 'BOOM!';
-        document.getElementById('multDisplay').style.color = 'var(--red-accent)';
+        document.getElementById('multDisplay').style.color = '#ef4444';
         document.getElementById('multLabel').textContent =
           `Perdiste ${betAmt.toFixed(2)} 🪙`;
         document.getElementById('payoutDisplay').textContent = '0.00 🪙';
@@ -353,7 +496,7 @@
         const payout = data.currentPayout;
 
         document.getElementById('multDisplay').textContent = mult.toFixed(4) + 'x';
-        document.getElementById('multDisplay').style.color = 'var(--green-neon)';
+        document.getElementById('multDisplay').style.color = '#00e676';
         document.getElementById('multLabel').textContent =
           `${revealed.length} celda${revealed.length > 1 ? 's' : ''} destapada${revealed.length > 1 ? 's' : ''}`;
         document.getElementById('payoutDisplay').textContent = payout.toFixed(2) + ' 🪙';
@@ -383,7 +526,6 @@
         if (mc && !mc.classList.contains('revealed-safe')) {
           mc.className = 'mine-cell hint disabled';
           mc.textContent = '💣';
-          mc.style.opacity = '0.5';
           mc.style.pointerEvents = 'none';
         }
       });
@@ -423,11 +565,11 @@
       document.getElementById('betControl').style.opacity = '1';
       document.getElementById('betControl').style.pointerEvents = 'auto';
       document.getElementById('multDisplay').textContent = '—';
-      document.getElementById('multDisplay').style.color = 'var(--green-neon)';
+      document.getElementById('multDisplay').style.color = '#00e676';
       document.getElementById('multLabel').textContent = 'Ganancia potencial';
       document.getElementById('payoutDisplay').textContent = '0.00 🪙';
       document.getElementById('actionArea').innerHTML = `
-        <button class="btn btn--orange btn--full btn--lg" onclick="startGame()">
+        <button class="btn-play" onclick="startGame()">
           💣 Jugar
         </button>
       `;

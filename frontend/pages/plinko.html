@@ -6,52 +6,167 @@
   <title>VirtualBet — Plinko</title>
   <link rel="stylesheet" href="../../css/main.css">
   <style>
-    #plinkoCanvas {
-      width: 100%;
-      max-width: 420px;
-      display: block;
-      margin: 0 auto;
-      border-radius: var(--radius-xl);
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+    /* ══════════════════════════════════════════════════════════════
+       LAYOUT — Sidebar + Stage
+    ══════════════════════════════════════════════════════════════ */
+    .game-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - var(--navbar-h));
+      background: #0f1117;
+    }
+    .game-sidebar {
+      background: #151822;
+      border-right: 1px solid #1e2130;
+      padding: 20px 16px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .game-stage {
+      background: #0f1117;
+      padding: 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px;
     }
 
+    .sb-label {
+      font-size: 11px; color: #6b7280; text-transform: uppercase;
+      letter-spacing: 1px; font-weight: 600; margin-bottom: 8px;
+    }
+    .sb-group { display: flex; flex-direction: column; }
+    .sb-input-wrap { position: relative; display: flex; align-items: center; }
+    .sb-input {
+      width: 100%; background: #0f1117; border: 1px solid #1e2130;
+      border-radius: 8px; color: #fff; font-size: 1.25rem; font-weight: 700;
+      padding: 12px 38px 12px 14px; outline: none; font-family: inherit;
+      font-variant-numeric: tabular-nums; transition: border-color 0.15s ease;
+    }
+    .sb-input:focus { border-color: #00e676; }
+    .sb-input::-webkit-outer-spin-button,
+    .sb-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sb-input[type=number] { -moz-appearance: textfield; }
+    .sb-input-suffix {
+      position: absolute; right: 12px; font-size: 1.05rem;
+      pointer-events: none; color: #6b7280;
+    }
+    .sb-quick {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 6px; margin-top: 8px;
+    }
+    .sb-quick button {
+      background: #1e2130; border: none; color: #cbd5e1;
+      font-weight: 600; font-size: 0.78rem; padding: 8px 0;
+      border-radius: 6px; cursor: pointer; font-family: inherit;
+      letter-spacing: 0.5px; transition: all 0.15s ease;
+    }
+    .sb-quick button:hover { background: #2a2f42; color: #fff; }
+
+    .sb-action { margin-top: auto; }
+    .btn-play {
+      width: 100%; background: #00e676; color: #000;
+      font-weight: 600; font-size: 0.95rem; padding: 14px;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+    .btn-play:hover:not(:disabled) {
+      background: #00ff88; box-shadow: 0 4px 16px rgba(0,230,118,0.3);
+    }
+    .btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Risk selector ────────────────────────────────────────────── */
+    .risk-row { display: flex; gap: 6px; }
+    .risk-btn {
+      flex: 1; padding: 9px 0; border: 1px solid transparent;
+      background: #1e2130; color: #cbd5e1;
+      border-radius: 6px; cursor: pointer; font-weight: 700;
+      font-size: 0.82rem; transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .risk-btn:hover { background: #2a2f42; }
+    .risk-btn.selected {
+      background: rgba(0,230,118,0.12);
+      border-color: #00e676;
+      color: #00e676;
+    }
+
+    /* ── Ball count selector ──────────────────────────────────────── */
+    .ball-count-row { display: flex; gap: 6px; }
+    .ball-opt {
+      flex: 1; padding: 9px 0; border: 1px solid transparent;
+      background: #1e2130; color: #cbd5e1;
+      border-radius: 6px; cursor: pointer; font-weight: 700;
+      font-size: 0.85rem; transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .ball-opt:hover { background: #2a2f42; }
+    .ball-opt.selected {
+      background: rgba(0,230,118,0.12);
+      border-color: #00e676;
+      color: #00e676;
+    }
+
+    /* ── Multi-bola summary ───────────────────────────────────────── */
+    .multi-summary {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px; margin-top: 0.6rem;
+    }
+    .multi-summary .cell {
+      background: #0f1117; border: 1px solid #1e2130;
+      border-radius: 6px; padding: 8px 4px; text-align: center;
+    }
+    .multi-summary .cell .lbl {
+      font-size: 9px; color: #6b7280; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 2px;
+    }
+    .multi-summary .cell .val {
+      font-weight: 800; font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PLINKO STAGE
+    ══════════════════════════════════════════════════════════════ */
+    #plinkoCanvas {
+      width: 100%; max-width: 480px;
+      display: block; margin: 0 auto;
+      border-radius: 16px;
+      background: #151822;
+      border: 1px solid #1e2130;
+    }
     .bucket-row {
-      display: flex;
-      max-width: 420px;
-      margin: 0 auto 1.5rem;
-      gap: 3px;
+      display: flex; max-width: 480px; width: 100%;
+      margin: 0 auto; gap: 3px;
     }
     .bucket {
-      flex: 1;
-      padding: 6px 2px;
-      text-align: center;
-      border-radius: var(--radius-sm);
-      font-size: 0.72rem;
-      font-weight: 700;
-      transition: all 0.3s ease;
+      flex: 1; padding: 8px 2px; text-align: center;
+      border-radius: 6px; font-size: 0.78rem; font-weight: 700;
+      transition: all 0.3s ease; font-variant-numeric: tabular-nums;
     }
     .bucket.hit {
-      transform: scale(1.15);
-      box-shadow: 0 0 12px currentColor;
+      transform: scale(1.18) translateY(-3px);
+      box-shadow: 0 0 14px currentColor;
     }
 
-    .risk-btn {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid var(--border);
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: all 0.2s ease;
+    .result-display {
+      background: #151822; border: 1px solid #1e2130;
+      border-radius: 12px; padding: 12px 24px;
+      text-align: center; min-width: 200px;
+      font-variant-numeric: tabular-nums;
     }
-    .risk-btn.selected {
-      background: rgba(124,58,237,0.15);
-      border-color: var(--purple);
-      color: var(--purple-light);
+    .result-display__number { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+    .result-display__label { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
+
+    @media (max-width: 768px) {
+      .game-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .game-sidebar {
+        order: 2; border-right: none;
+        border-top: 1px solid #1e2130; padding: 18px 16px;
+      }
+      .game-stage { order: 1; padding: 14px 12px; }
+      #plinkoCanvas { max-width: 100%; }
+      .bucket-row { max-width: 100%; }
+      .sb-action { margin-top: 12px; }
     }
   </style>
 </head>
@@ -59,68 +174,74 @@
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
-<main class="container page">
-  <div class="game-area">
+<div class="game-shell">
 
-    <!-- Canvas del tablero -->
-    <canvas id="plinkoCanvas" height="480"></canvas>
+  <!-- ────────── Sidebar ────────── -->
+  <aside class="game-sidebar">
 
-    <!-- Buckets con multiplicadores -->
-    <div class="bucket-row" id="bucketRow"></div>
-
-    <!-- Resultado -->
-    <div class="result-display" id="resultDisplay" style="margin-bottom:1.5rem;">
-      <div style="color:var(--text-muted);font-size:0.9rem;">Tirá la bola</div>
+    <!-- Riesgo -->
+    <div class="sb-group">
+      <div class="sb-label">Nivel de riesgo</div>
+      <div class="risk-row">
+        <button class="risk-btn selected" id="riskLow"  onclick="setRisk('low')">🟢 Bajo</button>
+        <button class="risk-btn"          id="riskMid"  onclick="setRisk('mid')">🟡 Medio</button>
+        <button class="risk-btn"          id="riskHigh" onclick="setRisk('high')">🔴 Alto</button>
+      </div>
     </div>
 
-    <!-- Controles -->
-    <div class="bet-controls">
-
-      <!-- Riesgo -->
-      <div class="form-group">
-        <label class="form-label">Nivel de riesgo</label>
-        <div style="display:flex;gap:8px;">
-          <button class="risk-btn selected" id="riskLow"  onclick="setRisk('low')">
-            🟢 Bajo
-          </button>
-          <button class="risk-btn" id="riskMid"  onclick="setRisk('mid')">
-            🟡 Medio
-          </button>
-          <button class="risk-btn" id="riskHigh" onclick="setRisk('high')">
-            🔴 Alto
-          </button>
-        </div>
+    <!-- Cantidad de bolas -->
+    <div class="sb-group">
+      <div class="sb-label">Cantidad de bolas</div>
+      <div class="ball-count-row">
+        <button class="ball-opt selected" data-count="1"  onclick="setBallCount(1)">1</button>
+        <button class="ball-opt"          data-count="3"  onclick="setBallCount(3)">3</button>
+        <button class="ball-opt"          data-count="5"  onclick="setBallCount(5)">5</button>
+        <button class="ball-opt"          data-count="10" onclick="setBallCount(10)">10</button>
       </div>
-
-      <!-- Apuesta -->
-      <div class="form-group">
-        <label class="form-label">Apuesta</label>
-        <div class="input-group">
-          <input class="form-input" type="number" id="betAmount"
-                 min="1" max="10000" value="10" step="1">
-          <span class="input-group__suffix">🪙</span>
-        </div>
-        <div class="multiplier-presets" style="margin-top:8px;">
-          <button onclick="setBet(10)">10</button>
-          <button onclick="setBet(50)">50</button>
-          <button onclick="setBet(100)">100</button>
-          <button onclick="setBet(500)">500</button>
-          <button onclick="setHalfBet()">½</button>
-          <button onclick="setMaxBet()">MAX</button>
-        </div>
+      <div id="multiSummary" class="multi-summary" style="display:none;">
+        <div class="cell"><div class="lbl">Tiradas</div><div class="val" id="msCount">0/0</div></div>
+        <div class="cell"><div class="lbl">Apostado</div><div class="val" style="color:#ffb020;" id="msWagered">0.00</div></div>
+        <div class="cell"><div class="lbl">Ganado</div><div class="val" style="color:#00e676;" id="msWon">0.00</div></div>
       </div>
+    </div>
 
-      <button class="btn btn--orange btn--full btn--lg" id="dropBtn" onclick="dropBall()">
+    <!-- Apuesta -->
+    <div class="sb-group">
+      <div class="sb-label">Apuesta</div>
+      <div class="sb-input-wrap">
+        <input class="sb-input" type="number" id="betAmount"
+               min="1" value="10" step="1">
+        <span class="sb-input-suffix">🪙</span>
+      </div>
+      <div class="sb-quick">
+        <button onclick="setBet(10)">10</button>
+        <button onclick="setBet(50)">50</button>
+        <button onclick="setBet(100)">100</button>
+        <button onclick="setMaxBet()">MAX</button>
+      </div>
+    </div>
+
+    <!-- Botón -->
+    <div class="sb-action">
+      <button class="btn-play" id="dropBtn" onclick="dropBall()">
         🔵 Soltar bola
       </button>
-
     </div>
-  </div>
-</main>
+  </aside>
+
+  <!-- ────────── Stage ────────── -->
+  <section class="game-stage">
+    <canvas id="plinkoCanvas" height="480"></canvas>
+    <div class="bucket-row" id="bucketRow"></div>
+    <div class="result-display" id="resultDisplay">
+      <div style="color:#6b7280;font-size:0.9rem;">Tirá la bola</div>
+    </div>
+  </section>
+</div>
 
 <script src="../../js/api.js"></script>
 <script src="../js/navbar.js"></script>
@@ -129,25 +250,29 @@
 
   let risk = 'low';
   let currentBalance = 0;
-  let animRunning = false;
+  let ballCount = 1;
+  let inFlightCount = 0;
+  let pendingLaunch = 0;
 
+  // Buckets: azul (bajos) → amarillo (medios) → rojo (altos)
   const MULTIPLIERS = {
     low:  [5.6, 2.1, 1.1, 1.0, 0.5, 1.0, 1.1, 2.1, 5.6],
     mid:  [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
     high: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
   };
 
-  const BUCKET_COLORS = {
-    low:  ['#10b981','#34d399','#6ee7b7','#a7f3d0','#6b7280','#a7f3d0','#6ee7b7','#34d399','#10b981'],
-    mid:  ['#f59e0b','#fbbf24','#10b981','#6ee7b7','#6b7280','#6ee7b7','#10b981','#fbbf24','#f59e0b'],
-    high: ['#ef4444','#f97316','#f59e0b','#6b7280','#374151','#6b7280','#f59e0b','#f97316','#ef4444'],
-  };
+  // Colores temáticos: rojo = mult alto, amarillo = mid, azul = bajo/centro
+  function bucketColor(mult) {
+    if (mult >= 10)  return '#ef4444';   // rojo — mult alto
+    if (mult >= 3)   return '#f97316';   // naranja
+    if (mult >= 1.5) return '#f59e0b';   // amarillo
+    if (mult >= 1)   return '#10b981';   // verde
+    return '#3b82f6';                    // azul — bajo (perdés)
+  }
 
   const canvas = document.getElementById('plinkoCanvas');
   const ctx    = canvas.getContext('2d');
-
   const ROWS = 16;
-  const PEGS_PER_ROW = ROWS + 1;
 
   async function loadBalance() {
     try {
@@ -167,34 +292,180 @@
     drawBoard();
   }
 
-  function setBet(n) { document.getElementById('betAmount').value = Math.min(n, 10000); }
+  function setBallCount(n) {
+    ballCount = n;
+    document.querySelectorAll('.ball-opt').forEach(b => {
+      b.classList.toggle('selected', parseInt(b.dataset.count) === n);
+    });
+    document.getElementById('multiSummary').style.display = n > 1 ? 'grid' : 'none';
+    document.getElementById('dropBtn').textContent =
+      n > 1 ? `🔵 Soltar ${n} bolas` : '🔵 Soltar bola';
+  }
+
+  function setBet(n) { document.getElementById('betAmount').value = n; }
   function setHalfBet() {
     const c = parseFloat(document.getElementById('betAmount').value) || 10;
     setBet(Math.max(1, Math.floor(c / 2)));
   }
-  function setMaxBet() { setBet(Math.min(currentBalance, 10000)); }
+  function setMaxBet() { setBet(Math.max(1, Math.floor(currentBalance))); }
 
-  // ── Dibuja el tablero de pegs ─────────────────────────────────────────────
-  function drawBoard(ballX = null, ballY = null, trail = []) {
+  // ══════════════════════════════════════════════════════════════
+  // FÍSICA / ANIMACIÓN
+  // ══════════════════════════════════════════════════════════════
+  const easeInQuad     = t => t * t;
+  const easeOutQuad    = t => t * (2 - t);
+  const easeOutCubic   = t => 1 - Math.pow(1 - t, 3);
+  const easeOutBounce  = t => {
+    const n1 = 7.5625, d1 = 2.75;
+    if (t < 1/d1)   return n1 * t * t;
+    if (t < 2/d1)   return n1 * (t -= 1.5/d1) * t + 0.75;
+    if (t < 2.5/d1) return n1 * (t -= 2.25/d1) * t + 0.9375;
+    return n1 * (t -= 2.625/d1) * t + 0.984375;
+  };
+
+  function boardGeom() {
     const W = canvas.offsetWidth;
     const H = 480;
-    canvas.width  = W * devicePixelRatio;
-    canvas.height = H * devicePixelRatio;
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-    ctx.clearRect(0, 0, W, H);
-
     const padX = 30, padY = 20;
     const gridW = W - padX * 2;
     const gridH = H - padY * 2 - 40;
     const rowH  = gridH / ROWS;
+    return { W, H, padX, padY, gridW, gridH, rowH };
+  }
 
-    // Dibuja pegs
+  function buildSegments(path, bucketIndex) {
+    const { W, H, padX, padY, gridW, rowH } = boardGeom();
+    const stepX = gridW / ROWS;
+
+    const segments = [];
+    let prevX = W / 2;
+    let prevY = padY - 6;
+    let col   = 0;
+
     for (let row = 0; row < ROWS; row++) {
       const pegsInRow = row + 2;
-      const startX = padX + (gridW - (pegsInRow - 1) * (gridW / ROWS)) / 2;
-      const stepX  = gridW / ROWS;
-      const y = padY + row * rowH + rowH / 2;
+      const startX = padX + (gridW - (pegsInRow - 1) * stepX) / 2;
 
+      const goRight = path[row];
+      col += goRight;
+
+      const pegX = startX + col * stepX;
+      const pegY = padY + row * rowH + rowH / 2;
+
+      const jitter = (Math.random() - 0.5) * 3;
+
+      segments.push({
+        from: { x: prevX, y: prevY },
+        to:   { x: pegX + jitter, y: pegY - 10 },
+        duration: 0.13 + Math.random() * 0.04,
+        easingX: easeOutQuad,
+        easingY: easeInQuad,
+      });
+
+      const bounceDir = goRight ? 1 : -1;
+      const bounceX   = pegX + bounceDir * (stepX * 0.5);
+      const bounceMidY = pegY + rowH * 0.45;
+
+      segments.push({
+        from: { x: pegX + jitter, y: pegY - 10 },
+        to:   { x: bounceX, y: bounceMidY },
+        duration: 0.10 + Math.random() * 0.03,
+        easingX: easeOutCubic,
+        easingY: easeOutBounce,
+      });
+
+      prevX = bounceX;
+      prevY = bounceMidY;
+    }
+
+    const bucketsN = MULTIPLIERS[risk].length;
+    const bucketW  = (W - padX * 2) / bucketsN;
+    const finalX   = padX + bucketIndex * bucketW + bucketW / 2;
+
+    segments.push({
+      from: { x: prevX, y: prevY },
+      to:   { x: finalX, y: H - 50 },
+      duration: 0.22,
+      easingX: easeOutCubic,
+      easingY: easeInQuad,
+    });
+
+    return segments;
+  }
+
+  const balls = [];
+  let rafActive = false;
+  let lastFrame = 0;
+
+  function ensureLoop() {
+    if (rafActive) return;
+    rafActive = true;
+    lastFrame = performance.now();
+    requestAnimationFrame(stepLoop);
+  }
+
+  function stepLoop(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+
+    for (const b of balls) {
+      if (b.done) continue;
+      const seg = b.segments[b.segIdx];
+      b.segT += dt / seg.duration;
+
+      if (b.segT >= 1) {
+        b.segT = 0;
+        b.segIdx++;
+        if (b.segIdx >= b.segments.length) {
+          b.x = seg.to.x; b.y = seg.to.y;
+          b.done = true;
+          if (b.onDone) b.onDone();
+          continue;
+        }
+      }
+
+      const cur = b.segments[b.segIdx];
+      const tx = cur.easingX(b.segT);
+      const ty = cur.easingY(b.segT);
+      b.x = cur.from.x + (cur.to.x - cur.from.x) * tx;
+      b.y = cur.from.y + (cur.to.y - cur.from.y) * ty;
+
+      b.trail.push({ x: b.x, y: b.y });
+      if (b.trail.length > 14) b.trail.shift();
+    }
+
+    drawBoard();
+
+    for (let i = balls.length - 1; i >= 0; i--) {
+      if (balls[i].done && balls[i].cleanupAt && performance.now() > balls[i].cleanupAt) {
+        balls.splice(i, 1);
+      } else if (balls[i].done && !balls[i].cleanupAt) {
+        balls[i].cleanupAt = performance.now() + 400;
+      }
+    }
+
+    if (balls.length > 0) {
+      requestAnimationFrame(stepLoop);
+    } else {
+      rafActive = false;
+      drawBoard();
+    }
+  }
+
+  function drawBoard() {
+    const { W, H, padX, padY, gridW, rowH } = boardGeom();
+    canvas.width  = W * devicePixelRatio;
+    canvas.height = H * devicePixelRatio;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    ctx.clearRect(0, 0, W, H);
+
+    const stepX = gridW / ROWS;
+
+    for (let row = 0; row < ROWS; row++) {
+      const pegsInRow = row + 2;
+      const startX = padX + (gridW - (pegsInRow - 1) * stepX) / 2;
+      const y = padY + row * rowH + rowH / 2;
       for (let col = 0; col < pegsInRow; col++) {
         const x = startX + col * stepX;
         ctx.beginPath();
@@ -204,173 +475,166 @@
       }
     }
 
-    // Dibuja trail de la bola
-    trail.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(124,58,237,${0.1 + 0.4 * (i / trail.length)})`;
-      ctx.fill();
-    });
-
-    // Dibuja bola actual
-    if (ballX !== null) {
-      ctx.beginPath();
-      ctx.arc(ballX, ballY, 8, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(ballX - 2, ballY - 2, 1, ballX, ballY, 8);
-      grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(1, '#9f67f5');
-      ctx.fillStyle = grad;
-      ctx.fill();
-    }
-  }
-
-  // ── Anima la trayectoria de la bola ──────────────────────────────────────
-  function animateBall(path, bucketIndex, onDone) {
-    const W   = canvas.offsetWidth;
-    const H   = 480;
-    const padX = 30, padY = 20;
-    const gridW = W - padX * 2;
-    const gridH = H - padY * 2 - 40;
-    const rowH  = gridH / ROWS;
-
-    // Calcula puntos de paso de la bola
-    const waypoints = [];
-    let col = 0; // empieza desde el top center
-
-    // Start point (top center)
-    waypoints.push({ x: W / 2, y: padY - 10 });
-
-    for (let row = 0; row < ROWS; row++) {
-      const pegsInRow = row + 2;
-      const stepX  = gridW / ROWS;
-      const startX = padX + (gridW - (pegsInRow - 1) * stepX) / 2;
-
-      // Celda actual
-      const goRight = path[row];
-      col += goRight;
-
-      // La bola cae al peg en [row][col] y luego al siguiente nivel
-      const pegX = startX + col * stepX;
-      const pegY = padY + row * rowH + rowH / 2;
-
-      // Punto de rebote en el peg
-      waypoints.push({ x: pegX, y: pegY - 12 });
-      // Punto debajo del peg (inicio de caída)
-      waypoints.push({ x: pegX + (goRight ? 12 : -12), y: pegY + 12 });
-    }
-
-    // Punto final en el bucket
-    const bucketsN = MULTIPLIERS[risk].length;
-    const bucketW  = (W - padX * 2) / bucketsN;
-    const finalX   = padX + bucketIndex * bucketW + bucketW / 2;
-    waypoints.push({ x: finalX, y: H - 50 });
-
-    // Anima entre waypoints
-    let wpIdx  = 0;
-    let t      = 0;
-    const trail = [];
-
-    function step() {
-      if (wpIdx >= waypoints.length - 1) {
-        onDone();
-        return;
+    for (const b of balls) {
+      b.trail.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(159,103,245,${0.06 + 0.45 * (i / b.trail.length)})`;
+        ctx.fill();
+      });
+      if (!b.done || performance.now() < (b.cleanupAt || Infinity) - 200) {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 8, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, 8);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, b.color || '#9f67f5');
+        ctx.fillStyle = grad;
+        ctx.fill();
       }
-
-      const from = waypoints[wpIdx];
-      const to   = waypoints[wpIdx + 1];
-      const speed = 0.06;
-      t += speed;
-
-      if (t >= 1) { t = 0; wpIdx++; }
-
-      const bx = from.x + (to.x - from.x) * t;
-      const by = from.y + (to.y - from.y) * t;
-
-      trail.push({ x: bx, y: by });
-      if (trail.length > 12) trail.shift();
-
-      drawBoard(bx, by, trail);
-      requestAnimationFrame(step);
     }
-    requestAnimationFrame(step);
   }
 
-  // ── Renders buckets ───────────────────────────────────────────────────────
   function renderBuckets(hitIdx = null) {
     const mults  = MULTIPLIERS[risk];
-    const colors = BUCKET_COLORS[risk];
     const row    = document.getElementById('bucketRow');
-    row.innerHTML = mults.map((m, i) => `
-      <div class="bucket ${hitIdx === i ? 'hit' : ''}"
-           style="background:${colors[i]}22;color:${colors[i]};border:1px solid ${colors[i]}55;">
-        ${m}x
-      </div>
-    `).join('');
+    row.innerHTML = mults.map((m, i) => {
+      const c = bucketColor(m);
+      return `
+        <div class="bucket ${hitIdx === i ? 'hit' : ''}"
+             style="background:${c}22;color:${c};border:1px solid ${c}55;">
+          ${m}x
+        </div>
+      `;
+    }).join('');
   }
 
-  // ── Suelta la bola ────────────────────────────────────────────────────────
-  async function dropBall() {
-    if (animRunning) return;
-    const betAmount = parseFloat(document.getElementById('betAmount').value);
+  // ══════════════════════════════════════════════════════════════
+  // DROP
+  // ══════════════════════════════════════════════════════════════
+  let multiStats = { total: 0, count: 0, wagered: 0, won: 0 };
 
+  function resetMultiStats(total) {
+    multiStats = { total, count: 0, wagered: 0, won: 0 };
+    updateMultiSummary();
+  }
+  function updateMultiSummary() {
+    document.getElementById('msCount').textContent =
+      `${multiStats.count}/${multiStats.total}`;
+    document.getElementById('msWagered').textContent =
+      multiStats.wagered.toFixed(2) + ' 🪙';
+    document.getElementById('msWon').textContent =
+      multiStats.won.toFixed(2) + ' 🪙';
+  }
+
+  async function dropBall() {
+    if (pendingLaunch > 0 || inFlightCount > 0) return;
+
+    const betAmount = parseFloat(document.getElementById('betAmount').value);
     if (!betAmount || betAmount < 1) { showToast('Apuesta mínima: 1 moneda', 'error'); return; }
-    if (betAmount > currentBalance)  { showToast('Saldo insuficiente', 'error'); return; }
+
+    const totalCost = betAmount * ballCount;
+    if (totalCost > currentBalance) {
+      showToast(`Saldo insuficiente. Necesitás ${totalCost.toFixed(2)} 🪙 para ${ballCount} bola${ballCount>1?'s':''}`, 'error');
+      return;
+    }
 
     const dropBtn = document.getElementById('dropBtn');
     dropBtn.disabled = true;
-    dropBtn.textContent = 'Cayendo...';
-    animRunning = true;
+    resetMultiStats(ballCount);
 
-    try {
-      const data = await api.post('/games/plinko', { betAmount, risk });
+    pendingLaunch = ballCount;
+    let launchIdx = 0;
 
-      // Anima con el path real del servidor
-      animateBall(data.path, data.bucketIndex, () => {
-        // Al terminar la animación → muestra resultado
+    const launchInterval = setInterval(async () => {
+      if (launchIdx >= ballCount) {
+        clearInterval(launchInterval);
+        return;
+      }
+      const idx = launchIdx++;
+      pendingLaunch--;
+      try {
+        const data = await api.post('/games/plinko', { betAmount, risk });
+        addBall(data, betAmount, idx);
+      } catch (err) {
+        showToast(err.message, 'error');
+        multiStats.count++;
+        updateMultiSummary();
+        maybeFinish();
+      }
+    }, 300);
+
+    setTimeout(() => {
+      if (inFlightCount === 0 && pendingLaunch === 0) {
+        dropBtn.disabled = false;
+        dropBtn.textContent = ballCount > 1 ? `🔵 Soltar ${ballCount} bolas` : '🔵 Soltar bola';
+      }
+    }, 300 * ballCount + 500);
+  }
+
+  function addBall(data, betAmount, idx) {
+    const segments = buildSegments(data.path, data.bucketIndex);
+    inFlightCount++;
+
+    const palette = ['#9f67f5', '#7c3aed', '#a78bfa', '#c4b5fd', '#5b21b6'];
+    const color = palette[idx % palette.length];
+
+    const ball = {
+      segments, segIdx: 0, segT: 0,
+      x: segments[0].from.x,
+      y: segments[0].from.y,
+      trail: [], color, done: false,
+      onDone: () => {
+        inFlightCount--;
         renderBuckets(data.bucketIndex);
+        setTimeout(() => renderBuckets(), 1800);
 
-        const resultEl = document.getElementById('resultDisplay');
-        if (data.result === 'WIN') {
-          resultEl.className = 'result-display result-display--win';
-          resultEl.innerHTML = `
-            <div class="result-display__number" style="color:var(--green-neon);">
-              ${data.multiplier.toFixed(2)}x
-            </div>
-            <div class="result-display__label">
-              +${data.payout.toFixed(2)} 🪙
-            </div>
-          `;
-          showToast(`¡Ganaste ${data.payout.toFixed(2)} 🪙 x${data.multiplier.toFixed(2)}!`, 'success');
-        } else {
-          resultEl.className = 'result-display result-display--loss';
-          resultEl.innerHTML = `
-            <div class="result-display__number" style="color:var(--red-accent);">
-              ${data.multiplier.toFixed(2)}x
-            </div>
-            <div class="result-display__label">
-              Perdiste ${betAmount.toFixed(2)} 🪙
-            </div>
-          `;
-          showToast('Sin suerte esta vez. ¡Intentá de nuevo!', 'error');
+        multiStats.count++;
+        multiStats.wagered += betAmount;
+        multiStats.won += data.payout;
+        updateMultiSummary();
+
+        if (multiStats.total === 1) {
+          if (data.result === 'WIN') {
+            showToast(`¡Ganaste ${data.payout.toFixed(2)} 🪙 x${data.multiplier.toFixed(2)}!`, 'success');
+          } else {
+            showToast('Sin suerte esta vez', 'error');
+          }
         }
 
         currentBalance = data.newBalance;
         document.getElementById('navBalance').textContent =
           currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
 
-        animRunning = false;
-        dropBtn.disabled = false;
-        dropBtn.textContent = '🔵 Soltar bola';
+        const resultEl = document.getElementById('resultDisplay');
+        const winColor = data.result === 'WIN' ? '#00e676' : '#ef4444';
+        resultEl.innerHTML = `
+          <div class="result-display__number" style="color:${winColor};">
+            ${data.multiplier.toFixed(2)}x
+          </div>
+          <div class="result-display__label">
+            ${data.result === 'WIN' ? '+' : '-'}${(data.result === 'WIN' ? data.payout : betAmount).toFixed(2)} 🪙
+          </div>
+        `;
 
-        // Limpia el resaltado de bucket después de un rato
-        setTimeout(() => renderBuckets(), 2500);
-      });
+        maybeFinish();
+      },
+    };
+    balls.push(ball);
+    ensureLoop();
+  }
 
-    } catch(err) {
-      showToast(err.message, 'error');
-      animRunning = false;
+  function maybeFinish() {
+    const dropBtn = document.getElementById('dropBtn');
+    if (inFlightCount === 0 && pendingLaunch === 0 && multiStats.count >= multiStats.total) {
       dropBtn.disabled = false;
-      dropBtn.textContent = '🔵 Soltar bola';
+      dropBtn.textContent = ballCount > 1 ? `🔵 Soltar ${ballCount} bolas` : '🔵 Soltar bola';
+
+      if (multiStats.total > 1) {
+        const net = multiStats.won - multiStats.wagered;
+        const sign = net >= 0 ? '+' : '';
+        showToast(`Tanda: ${multiStats.total} bolas — neto ${sign}${net.toFixed(2)} 🪙`,
+                  net >= 0 ? 'success' : 'error');
+      }
     }
   }
 

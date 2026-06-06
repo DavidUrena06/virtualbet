@@ -5,117 +5,273 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VirtualBet — Casino</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    /* ── Stats header limpio ──────────────────────────────────────── */
+    .dash-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 2rem;
+    }
+    .dash-stat {
+      background: #151822;
+      border: 1px solid #1e2130;
+      border-radius: 10px;
+      padding: 14px 16px;
+      transition: border-color 0.15s ease;
+    }
+    .dash-stat:hover { border-color: #2a2f42; }
+    .dash-stat__label {
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .dash-stat__value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .dash-stat__value--green  { color: #00e676; }
+    .dash-stat__value--gold   { color: #ffb020; }
+    .dash-stat__value--purple { color: #9f67f5; }
+
+    /* ── Section heading ─────────────────────────────────────────── */
+    .section-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
+    }
+    .section-head h2 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    /* ── Game cards rediseñadas ──────────────────────────────────── */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 2.5rem;
+    }
+    .game-card {
+      position: relative;
+      background: linear-gradient(135deg, #1a1f2e 0%, #151822 100%);
+      border: 1px solid #1e2130;
+      border-radius: 14px;
+      padding: 22px 18px 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .game-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at top right, var(--accent, rgba(0,230,118,0.08)) 0%, transparent 60%);
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      opacity: 0.6;
+    }
+    .game-card:hover {
+      border-color: #2a3f4f;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .game-card:hover::before { opacity: 1; }
+
+    .game-card__icon {
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+      display: block;
+      position: relative; z-index: 1;
+    }
+    .game-card__name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+      position: relative; z-index: 1;
+    }
+    .game-card__desc {
+      font-size: 0.78rem;
+      color: #8a92a8;
+      margin-bottom: 14px;
+      position: relative; z-index: 1;
+    }
+    .game-card__edge {
+      font-size: 0.65rem;
+      color: #6b7280;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 99px;
+      display: inline-block;
+      position: relative; z-index: 1;
+    }
+
+    /* Color accents por juego */
+    .game-card--dice     { --accent: rgba(124,58,237,0.12); }
+    .game-card--coinflip { --accent: rgba(245,158,11,0.12); }
+    .game-card--crash    { --accent: rgba(0,230,118,0.12); }
+    .game-card--mines    { --accent: rgba(239,68,68,0.12); }
+    .game-card--plinko   { --accent: rgba(59,130,246,0.12); }
+
+    /* ── Match preview cards ─────────────────────────────────────── */
+    .match-preview {
+      background: #151822;
+      border: 1px solid #1e2130;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+    .match-preview:hover { border-color: #2a2f42; }
+
+    /* ── Welcome banner ──────────────────────────────────────────── */
+    .welcome {
+      margin-bottom: 1.75rem;
+    }
+    .welcome h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+      color: #fff;
+    }
+    .welcome p {
+      color: #8a92a8;
+      font-size: 0.85rem;
+    }
+
+    /* ── Mobile ──────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .dash-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .dash-stat__value { font-size: 1.05rem; }
+      .games-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .game-card { padding: 18px 14px 14px; }
+      .game-card__icon { font-size: 2rem; }
+      .game-card__name { font-size: 1rem; }
+    }
+  </style>
 </head>
 <body>
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
 <main class="container page">
 
   <!-- Bienvenida -->
-  <div style="margin-bottom:1.5rem;">
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.25rem;">
-      Bienvenido, <span id="username" style="color:var(--purple-light);">...</span> 👋
-    </h1>
-    <p style="color:var(--text-secondary);font-size:0.9rem;">Moneda: <strong style="color:var(--gold);">BetCoins (BC)</strong></p>
+  <div class="welcome">
+    <h1>Bienvenido, <span id="username" style="color:#9f67f5;">...</span> 👋</h1>
+    <p>Moneda: <strong style="color:#ffb020;">BetCoins (BC)</strong></p>
   </div>
 
   <!-- Stats -->
-  <div class="stats-grid" style="margin-bottom:2rem;">
-    <div class="stat-card">
-      <div class="stat-card__label">Balance disponible</div>
-      <div class="stat-card__value stat-card__value--green" id="balance">—</div>
+  <div class="dash-stats">
+    <div class="dash-stat">
+      <div class="dash-stat__label">Balance</div>
+      <div class="dash-stat__value dash-stat__value--green" id="balance">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-card__label">Total apostado</div>
-      <div class="stat-card__value stat-card__value--purple" id="totalWagered">—</div>
+    <div class="dash-stat">
+      <div class="dash-stat__label">Total apostado</div>
+      <div class="dash-stat__value dash-stat__value--purple" id="totalWagered">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-card__label">Total ganado</div>
-      <div class="stat-card__value stat-card__value--gold" id="totalWon">—</div>
+    <div class="dash-stat">
+      <div class="dash-stat__label">Total ganado</div>
+      <div class="dash-stat__value dash-stat__value--gold" id="totalWon">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-card__label">Partidas jugadas</div>
-      <div class="stat-card__value" id="gamesPlayed">—</div>
+    <div class="dash-stat">
+      <div class="dash-stat__label">Partidas</div>
+      <div class="dash-stat__value" id="gamesPlayed">—</div>
     </div>
   </div>
 
   <!-- Juegos -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
-    <h2 style="font-size:1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
-      Juegos del casino
-    </h2>
+  <div class="section-head">
+    <h2>Juegos del casino</h2>
   </div>
 
-  <div class="games-grid" style="margin-bottom:2.5rem;">
-    <div class="card card--game" onclick="goGame('dice.html')">
-      <span class="game-icon">🎲</span>
-      <div class="game-name">Dice</div>
-      <div class="game-desc">Predecí el dado</div>
-      <div class="game-edge">House edge 1%</div>
-    </div>
-    <div class="card card--game" onclick="goGame('coinflip.html')">
-      <span class="game-icon">🪙</span>
-      <div class="game-name">Coinflip</div>
-      <div class="game-desc">Cara o cruz</div>
-      <div class="game-edge">House edge 2%</div>
-    </div>
-    <div class="card card--game" onclick="goGame('crash.html')">
-      <span class="game-icon">📈</span>
-      <div class="game-name">Crash</div>
-      <div class="game-desc">Retirá a tiempo</div>
-      <div class="game-edge">House edge 3%</div>
-    </div>
-    <div class="card card--game" onclick="goGame('mines.html')">
-      <span class="game-icon">💣</span>
-      <div class="game-name">Mines</div>
-      <div class="game-desc">Evitá las minas</div>
-      <div class="game-edge">House edge 3%</div>
-    </div>
-    <div class="card card--game" onclick="goGame('plinko.html')">
-      <span class="game-icon">🔵</span>
-      <div class="game-name">Plinko</div>
-      <div class="game-desc">La bolita cae</div>
-      <div class="game-edge">House edge 1-5%</div>
-    </div>
-    <div class="card card--game" onclick="goGame('roulette.html')">
-      <span class="game-icon">🎡</span>
-      <div class="game-name">Ruleta</div>
-      <div class="game-desc">Ruleta europea</div>
-      <div class="game-edge">House edge 2.7%</div>
-    </div>
+  <div class="games-grid">
+    <a class="game-card game-card--dice" href="./dice.html">
+      <span class="game-card__icon">🎲</span>
+      <div class="game-card__name">Dice</div>
+      <div class="game-card__desc">Predecí el dado</div>
+      <span class="game-card__edge">House edge 3%</span>
+    </a>
+
+    <a class="game-card game-card--coinflip" href="./coinflip.html">
+      <span class="game-card__icon">🪙</span>
+      <div class="game-card__name">Coinflip</div>
+      <div class="game-card__desc">Cara o cruz</div>
+      <span class="game-card__edge">House edge 2%</span>
+    </a>
+
+    <a class="game-card game-card--crash" href="./crash.html">
+      <span class="game-card__icon">📈</span>
+      <div class="game-card__name">Crash</div>
+      <div class="game-card__desc">Retirá a tiempo</div>
+      <span class="game-card__edge">House edge 1%</span>
+    </a>
+
+    <a class="game-card game-card--mines" href="./mines.html">
+      <span class="game-card__icon">💣</span>
+      <div class="game-card__name">Mines</div>
+      <div class="game-card__desc">Evitá las minas</div>
+      <span class="game-card__edge">House edge 3%</span>
+    </a>
+
+    <a class="game-card game-card--plinko" href="./plinko.html">
+      <span class="game-card__icon">🔵</span>
+      <div class="game-card__name">Plinko</div>
+      <div class="game-card__desc">La bolita cae</div>
+      <span class="game-card__edge">House edge variable</span>
+    </a>
   </div>
 
   <!-- Apuestas deportivas -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
-    <h2 style="font-size:1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
-      Apuestas deportivas
-    </h2>
+  <div class="section-head">
+    <h2>Apuestas deportivas</h2>
     <a href="./sports.html" class="btn btn--ghost btn--sm">Ver todos →</a>
   </div>
 
   <div id="matchesPreview">
-    <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+    <div style="text-align:center;padding:2rem;color:#6b7280;">
       <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
       Cargando partidos...
     </div>
   </div>
 
   <!-- Acceso rápido P2P y amigos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.5rem;">
-    <a href="./p2p.html" class="card" style="cursor:pointer;display:block;text-decoration:none;">
-      <div style="font-size:1.5rem;margin-bottom:0.5rem;">🤝</div>
-      <div style="font-weight:700;margin-bottom:0.25rem;">Apuestas P2P</div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);">Apostá con tus amigos en tiempo real</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1.75rem;">
+    <a href="./p2p.html" class="game-card" style="--accent: rgba(124,58,237,0.12);">
+      <span class="game-card__icon">🤝</span>
+      <div class="game-card__name">Apuestas P2P</div>
+      <div class="game-card__desc">Apostá con tus amigos en tiempo real</div>
     </a>
-    <a href="./friends.html" class="card" style="cursor:pointer;display:block;text-decoration:none;">
-      <div style="font-size:1.5rem;margin-bottom:0.5rem;">👥</div>
-      <div style="font-weight:700;margin-bottom:0.25rem;">Mis amigos</div>
-      <div style="font-size:0.82rem;color:var(--text-secondary);">Buscá y conectá con otros jugadores</div>
+    <a href="./friends.html" class="game-card" style="--accent: rgba(0,230,118,0.12);">
+      <span class="game-card__icon">👥</span>
+      <div class="game-card__name">Mis amigos</div>
+      <div class="game-card__desc">Buscá y conectá con otros jugadores</div>
     </a>
   </div>
 
@@ -151,12 +307,11 @@
   async function loadMatchesPreview() {
     const container = document.getElementById('matchesPreview');
     try {
-      // Carga todos los partidos UPCOMING sin filtro de liga
       const data = await VB.sports.matches('', 'UPCOMING');
 
       if (!data || !data.matches || data.matches.length === 0) {
         container.innerHTML = `
-          <div class="card" style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+          <div class="match-preview" style="text-align:center;color:#6b7280;cursor:default;">
             No hay partidos disponibles. El admin los publica desde el panel de administración.
           </div>`;
         return;
@@ -165,32 +320,31 @@
       const preview = data.matches.slice(0, 3);
 
       container.innerHTML = preview.map(m => `
-        <div class="card" style="margin-bottom:0.75rem;cursor:pointer;"
-             onclick="window.location.href='./sports.html'">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-            <div style="min-width:0;">
-              <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">
+        <div class="match-preview" onclick="window.location.href='./sports.html'">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-size:0.65rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
                 ${m.league}
               </div>
-              <div style="font-weight:700;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              <div style="font-weight:700;font-size:0.95rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 ${m.teamHome} vs ${m.teamAway}
               </div>
-              <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">
+              <div style="font-size:0.72rem;color:#8a92a8;margin-top:3px;">
                 ${timeUntil(m.startsAt)}
               </div>
             </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
-                <div style="font-size:0.62rem;color:var(--text-muted);">LOCAL</div>
-                <div style="font-weight:800;color:var(--green-neon);font-size:0.95rem;">${parseFloat(m.oddHome).toFixed(2)}</div>
+            <div style="display:flex;gap:5px;flex-shrink:0;">
+              <div style="text-align:center;background:#0f1117;border-radius:6px;padding:6px 10px;min-width:52px;">
+                <div style="font-size:0.6rem;color:#6b7280;letter-spacing:0.5px;">LOCAL</div>
+                <div style="font-weight:800;color:#00e676;font-size:0.95rem;">${parseFloat(m.oddHome).toFixed(2)}</div>
               </div>
-              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
-                <div style="font-size:0.62rem;color:var(--text-muted);">EMPATE</div>
-                <div style="font-weight:800;color:var(--gold);font-size:0.95rem;">${parseFloat(m.oddDraw).toFixed(2)}</div>
+              <div style="text-align:center;background:#0f1117;border-radius:6px;padding:6px 10px;min-width:52px;">
+                <div style="font-size:0.6rem;color:#6b7280;letter-spacing:0.5px;">EMPATE</div>
+                <div style="font-weight:800;color:#ffb020;font-size:0.95rem;">${parseFloat(m.oddDraw).toFixed(2)}</div>
               </div>
-              <div style="text-align:center;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:5px 10px;min-width:52px;">
-                <div style="font-size:0.62rem;color:var(--text-muted);">VISITA</div>
-                <div style="font-weight:800;color:var(--blue-accent);font-size:0.95rem;">${parseFloat(m.oddAway).toFixed(2)}</div>
+              <div style="text-align:center;background:#0f1117;border-radius:6px;padding:6px 10px;min-width:52px;">
+                <div style="font-size:0.6rem;color:#6b7280;letter-spacing:0.5px;">VISITA</div>
+                <div style="font-weight:800;color:#3b82f6;font-size:0.95rem;">${parseFloat(m.oddAway).toFixed(2)}</div>
               </div>
             </div>
           </div>
@@ -200,17 +354,12 @@
     } catch (err) {
       console.error('Error cargando partidos:', err);
       container.innerHTML = `
-        <div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+        <div class="match-preview" style="text-align:center;color:#6b7280;cursor:default;">
           Error al cargar partidos: ${err.message}
         </div>`;
     }
   }
 
-  function goGame(page) {
-    window.location.href = `${page}`;
-  }
-
-  // Init
   loadDashboard();
   loadMatchesPreview();
 </script>
