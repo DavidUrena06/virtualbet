@@ -23,10 +23,10 @@
     }
     .game-stage {
       background: #0f1117;
-      padding: 16px;
+      padding: 24px 20px;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 14px;
+      gap: 20px;
     }
 
     .sb-label {
@@ -128,21 +128,22 @@
        PLINKO STAGE
     ══════════════════════════════════════════════════════════════ */
     #plinkoCanvas {
-      width: 100%; max-width: 560px;
-      min-height: 560px;
+      width: 100%; max-width: 760px;
+      min-height: 700px;
       display: block; margin: 0 auto;
-      border-radius: 16px;
+      border-radius: 18px;
       background: #151822;
       border: 1px solid #1e2130;
     }
     .bucket-row {
-      display: flex; max-width: 560px; width: 100%;
-      margin: 0 auto; gap: 4px;
+      display: flex; max-width: 760px; width: 100%;
+      margin: 0 auto; gap: 6px;
     }
     .bucket {
-      flex: 1; padding: 10px 2px; text-align: center;
-      border-radius: 8px; font-size: 1rem; font-weight: 800;
+      flex: 1; padding: 14px 2px; text-align: center;
+      border-radius: 10px; font-size: 1.3rem; font-weight: 800;
       transition: all 0.3s ease; font-variant-numeric: tabular-nums;
+      letter-spacing: 0.3px;
     }
     .bucket.hit {
       transform: scale(1.18) translateY(-3px);
@@ -151,12 +152,12 @@
 
     .result-display {
       background: #151822; border: 1px solid #1e2130;
-      border-radius: 12px; padding: 14px 28px;
-      text-align: center; min-width: 240px;
+      border-radius: 14px; padding: 20px 44px;
+      text-align: center; min-width: 320px;
       font-variant-numeric: tabular-nums;
     }
-    .result-display__number { font-size: 2.4rem; font-weight: 800; line-height: 1; }
-    .result-display__label { font-size: 0.9rem; color: #6b7280; margin-top: 6px; }
+    .result-display__number { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+    .result-display__label { font-size: 1.05rem; color: #6b7280; margin-top: 10px; }
 
     @media (max-width: 768px) {
       .game-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
@@ -164,11 +165,13 @@
         order: 2; border-right: none;
         border-top: 1px solid #1e2130; padding: 18px 16px;
       }
-      .game-stage { order: 1; padding: 14px 10px; }
-      #plinkoCanvas { max-width: 100%; min-height: 420px; }
-      .bucket-row { max-width: 100%; }
-      .bucket { font-size: 0.82rem; }
-      .result-display__number { font-size: 1.9rem; }
+      .game-stage { order: 1; padding: 16px 10px; gap: 14px; }
+      #plinkoCanvas { max-width: 100%; min-height: 460px; }
+      .bucket-row { max-width: 100%; gap: 3px; }
+      .bucket { font-size: 0.9rem; padding: 10px 2px; }
+      .result-display { padding: 14px 28px; min-width: 0; }
+      .result-display__number { font-size: 2.4rem; }
+      .result-display__label { font-size: 0.9rem; margin-top: 6px; }
       .sb-action { margin-top: 12px; }
     }
   </style>
@@ -238,7 +241,7 @@
 
   <!-- ────────── Stage ────────── -->
   <section class="game-stage">
-    <canvas id="plinkoCanvas" height="560"></canvas>
+    <canvas id="plinkoCanvas" height="700"></canvas>
     <div class="bucket-row" id="bucketRow"></div>
     <div class="result-display" id="resultDisplay">
       <div style="color:#6b7280;font-size:0.9rem;">Tirá la bola</div>
@@ -328,11 +331,11 @@
 
   function boardGeom() {
     const W = canvas.offsetWidth;
-    // En móvil reducimos altura; desktop usa 560 (alineado con CSS min-height)
-    const H = window.innerWidth <= 768 ? 420 : 560;
-    const padX = 30, padY = 20;
+    // Mobile: 460px; Desktop: 700 (alineado con CSS min-height)
+    const H = window.innerWidth <= 768 ? 460 : 700;
+    const padX = 36, padY = 28;
     const gridW = W - padX * 2;
-    const gridH = H - padY * 2 - 50;
+    const gridH = H - padY * 2 - 60;
     const rowH  = gridH / ROWS;
     return { W, H, padX, padY, gridW, gridH, rowH };
   }

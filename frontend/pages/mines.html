@@ -27,12 +27,12 @@
 
     .game-stage {
       background: #0f1117;
-      padding: 20px 18px;
+      padding: 28px 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
+      gap: 32px;
     }
 
     /* ── Tipografía e inputs del sidebar ──────────────────────────── */
@@ -146,54 +146,55 @@
     /* ── Multiplier display del stage ─────────────────────────────── */
     .mult-display {
       text-align: center;
-      padding: 18px 32px;
+      padding: 28px 64px;
       background: #151822;
       border: 1px solid #1e2130;
-      border-radius: 12px;
-      min-width: 320px;
+      border-radius: 16px;
+      min-width: 520px;
     }
     .mult-display .mult-value {
-      font-size: 3rem;
+      font-size: 4.5rem;
       font-weight: 800;
       color: #00e676;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      letter-spacing: 1px;
       transition: color 0.2s ease;
     }
     .mult-display .mult-label {
-      font-size: 0.7rem;
+      font-size: 0.82rem;
       color: #6b7280;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 6px;
+      letter-spacing: 2px;
+      margin-top: 14px;
     }
     .mult-display .payout-line {
-      font-size: 0.9rem;
+      font-size: 1.15rem;
       color: #cbd5e1;
-      margin-top: 8px;
+      margin-top: 14px;
     }
-    .mult-display .payout-line strong { color: #00e676; }
+    .mult-display .payout-line strong { color: #00e676; font-size: 1.3rem; }
 
     /* ── Tablero 5×5 ──────────────────────────────────────────────── */
     .mines-board {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
+      gap: 18px;
       width: 100%;
-      min-width: 380px;
-      max-width: 560px;
+      min-width: 480px;
+      max-width: 760px;
       aspect-ratio: 1;
-      min-height: 480px;
+      min-height: 520px;
     }
     .mine-cell {
       aspect-ratio: 1;
-      border-radius: 12px;
+      border-radius: 16px;
       background: #1a1f2e;
-      border: 1px solid #1e2130;
+      border: 2px solid #1e2130;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.4rem;
+      font-size: 3.6rem;
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
       user-select: none;
@@ -253,11 +254,13 @@
         order: 1;
         padding: 14px 10px;
       }
-      .mines-board { min-width: 0; max-width: 380px; min-height: 0; }
-      .mine-cell { font-size: 2rem; }
+      .mines-board { min-width: 0; max-width: 420px; min-height: 0; gap: 10px; }
+      .mine-cell { font-size: 2.4rem; border-radius: 12px; }
       .sb-action { margin-top: 12px; }
-      .mult-display { padding: 14px 20px; min-width: 0; width: 100%; max-width: 380px; }
-      .mult-display .mult-value { font-size: 2.2rem; }
+      .mult-display { padding: 18px 24px; min-width: 0; width: 100%; max-width: 420px; }
+      .mult-display .mult-value { font-size: 2.8rem; }
+      .mult-display .mult-label { margin-top: 8px; }
+      .mult-display .payout-line { font-size: 1rem; margin-top: 8px; }
     }
   </style>
 </head>

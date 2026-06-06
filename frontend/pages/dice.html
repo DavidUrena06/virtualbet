@@ -23,10 +23,10 @@
     }
     .game-stage {
       background: #0f1117;
-      padding: 24px 20px;
+      padding: 36px 28px;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 24px;
+      gap: 28px;
     }
 
     .sb-label {
@@ -108,23 +108,24 @@
     ══════════════════════════════════════════════════════════════ */
     .dice-card {
       background: #151822; border: 1px solid #1e2130;
-      border-radius: 16px; padding: 3rem 2.5rem;
-      text-align: center; max-width: 720px; width: 100%;
-      min-height: 480px;
+      border-radius: 20px; padding: 5rem 4rem;
+      text-align: center; max-width: 900px; width: 100%;
+      min-height: 620px;
       display: flex; flex-direction: column; justify-content: center;
       position: relative; overflow: hidden;
     }
     .dice-card::before {
       content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse at center, rgba(0,230,118,0.05) 0%, transparent 70%);
+      background: radial-gradient(ellipse at center, rgba(0,230,118,0.06) 0%, transparent 70%);
       pointer-events: none;
     }
 
     .roll-number {
-      font-size: 8rem; font-weight: 900; line-height: 1;
+      font-size: 12rem; font-weight: 900; line-height: 1;
       transition: all 0.3s ease;
       font-variant-numeric: tabular-nums;
       color: #fff;
+      letter-spacing: -4px;
     }
     .roll-number.rolling { animation: rollFlicker 0.5s steps(1) infinite; }
     @keyframes rollFlicker {
@@ -171,9 +172,9 @@
         order: 2; border-right: none;
         border-top: 1px solid #1e2130; padding: 18px 16px;
       }
-      .game-stage { order: 1; padding: 14px 10px; }
-      .dice-card { padding: 1.8rem 1.2rem; min-height: 0; }
-      .roll-number { font-size: 5rem; }
+      .game-stage { order: 1; padding: 18px 12px; }
+      .dice-card { padding: 2.2rem 1.4rem; min-height: 0; border-radius: 16px; }
+      .roll-number { font-size: 6.5rem; letter-spacing: -2px; }
       .sb-action { margin-top: 12px; }
     }
   </style>
@@ -259,30 +260,30 @@
   <section class="game-stage">
 
     <div class="dice-card">
-      <div style="font-size:11px;color:#6b7280;text-transform:uppercase;
-                  letter-spacing:2px;margin-bottom:1.5rem;">Resultado</div>
+      <div style="font-size:0.85rem;color:#6b7280;text-transform:uppercase;
+                  letter-spacing:3px;margin-bottom:2rem;">Resultado</div>
 
       <div class="roll-number" id="rollDisplay">—</div>
 
-      <div id="resultLabel" style="margin-top:1rem;font-size:1rem;font-weight:600;
-                                   color:#6b7280;min-height:28px;">
+      <div id="resultLabel" style="margin-top:1.5rem;font-size:1.3rem;font-weight:600;
+                                   color:#6b7280;min-height:34px;">
         Tirá el dado
       </div>
 
-      <div style="margin-top:2rem;">
+      <div style="margin-top:3rem;">
         <div style="display:flex;justify-content:space-between;
-                    font-size:0.72rem;color:#6b7280;margin-bottom:8px;">
+                    font-size:0.85rem;color:#6b7280;margin-bottom:12px;">
           <span>0</span>
-          <span id="targetLabel" style="color:#00e676;font-weight:700;">Target: 50</span>
+          <span id="targetLabel" style="color:#00e676;font-weight:700;font-size:1rem;">Target: 50</span>
           <span>100</span>
         </div>
-        <div style="position:relative;height:8px;border-radius:4px;
+        <div style="position:relative;height:12px;border-radius:6px;
                     overflow:hidden;background:#1e2130;">
           <div id="winZone" style="position:absolute;top:0;height:100%;
-                                   background:rgba(0,230,118,0.4);border-radius:4px;
+                                   background:rgba(0,230,118,0.4);border-radius:6px;
                                    transition:all 0.2s ease;"></div>
-          <div id="targetMarker" style="position:absolute;top:-3px;width:2px;height:14px;
-                                        background:#00e676;border-radius:1px;
+          <div id="targetMarker" style="position:absolute;top:-4px;width:3px;height:20px;
+                                        background:#00e676;border-radius:2px;
                                         transition:left 0.2s ease;"></div>
         </div>
       </div>
