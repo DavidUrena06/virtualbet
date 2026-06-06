@@ -11,15 +11,15 @@
     ══════════════════════════════════════════════════════════════ */
     .game-shell {
       display: grid;
-      grid-template-columns: 200px 1fr;
+      grid-template-columns: 300px 1fr;
       min-height: calc(100vh - var(--navbar-h));
       background: #0f1117;
     }
     .game-sidebar {
       background: #151822;
       border-right: 1px solid #1e2130;
-      padding: 20px 14px;
-      display: flex; flex-direction: column; gap: 16px;
+      padding: 28px 22px;
+      display: flex; flex-direction: column; gap: 24px;
     }
     .game-stage {
       background: #0f1117;
@@ -30,15 +30,15 @@
     }
 
     .sb-label {
-      font-size: 11px; color: #6b7280; text-transform: uppercase;
-      letter-spacing: 1px; font-weight: 600; margin-bottom: 8px;
+      font-size: 13px; color: #8a92a8; text-transform: uppercase;
+      letter-spacing: 1.5px; font-weight: 700; margin-bottom: 12px;
     }
     .sb-group { display: flex; flex-direction: column; }
     .sb-input-wrap { position: relative; display: flex; align-items: center; }
     .sb-input {
-      width: 100%; background: #0f1117; border: 1px solid #1e2130;
-      border-radius: 8px; color: #fff; font-size: 1.25rem; font-weight: 700;
-      padding: 12px 38px 12px 14px; outline: none; font-family: inherit;
+      width: 100%; background: #0f1117; border: 1.5px solid #1e2130;
+      border-radius: 10px; color: #fff; font-size: 1.6rem; font-weight: 800;
+      padding: 16px 48px 16px 18px; outline: none; font-family: inherit;
       font-variant-numeric: tabular-nums; transition: border-color 0.15s ease;
     }
     .sb-input:focus { border-color: #00e676; }
@@ -46,17 +46,17 @@
     .sb-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .sb-input[type=number] { -moz-appearance: textfield; }
     .sb-input-suffix {
-      position: absolute; right: 12px; font-size: 1.05rem;
+      position: absolute; right: 16px; font-size: 1.3rem;
       pointer-events: none; color: #6b7280;
     }
     .sb-quick {
       display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 6px; margin-top: 8px;
+      gap: 8px; margin-top: 12px;
     }
     .sb-quick button {
       background: #1e2130; border: none; color: #cbd5e1;
-      font-weight: 600; font-size: 0.78rem; padding: 8px 0;
-      border-radius: 6px; cursor: pointer; font-family: inherit;
+      font-weight: 700; font-size: 0.95rem; padding: 12px 0;
+      border-radius: 8px; cursor: pointer; font-family: inherit;
       letter-spacing: 0.5px; transition: all 0.15s ease;
     }
     .sb-quick button:hover { background: #2a2f42; color: #fff; }
@@ -64,27 +64,27 @@
     .sb-action { margin-top: auto; }
     .btn-play {
       width: 100%; background: #00e676; color: #000;
-      font-weight: 600; font-size: 0.95rem; padding: 14px;
-      border: none; border-radius: 8px; cursor: pointer;
-      font-family: inherit; letter-spacing: 0.5px;
+      font-weight: 700; font-size: 1.15rem; padding: 18px;
+      border: none; border-radius: 10px; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.8px;
       transition: all 0.15s ease;
     }
     .btn-play:hover:not(:disabled) {
-      background: #00ff88; box-shadow: 0 4px 16px rgba(0,230,118,0.3);
+      background: #00ff88; box-shadow: 0 4px 18px rgba(0,230,118,0.35);
     }
     .btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── Direction toggle ─────────────────────────────────────────── */
     .direction-toggle {
       display: flex; background: #0f1117;
-      border: 1px solid #1e2130; border-radius: 8px;
+      border: 1.5px solid #1e2130; border-radius: 10px;
       overflow: hidden;
     }
     .direction-toggle button {
-      flex: 1; padding: 11px 0; border: none;
+      flex: 1; padding: 16px 0; border: none;
       background: transparent; color: #6b7280;
-      font-size: 0.9rem; font-weight: 700; cursor: pointer;
-      transition: all 0.2s ease; letter-spacing: 1px;
+      font-size: 1.05rem; font-weight: 800; cursor: pointer;
+      transition: all 0.2s ease; letter-spacing: 1.5px;
       font-family: inherit;
     }
     .direction-toggle button.active {
@@ -92,16 +92,16 @@
     }
 
     /* ── Stats sidebar mini ──────────────────────────────────────── */
-    .sb-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .sb-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
     .sb-stat {
       background: #0f1117; border: 1px solid #1e2130;
-      border-radius: 8px; padding: 8px 4px; text-align: center;
+      border-radius: 10px; padding: 12px 6px; text-align: center;
     }
     .sb-stat .lbl {
-      font-size: 9px; color: #6b7280; text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 3px;
+      font-size: 11px; color: #8a92a8; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 6px; font-weight: 700;
     }
-    .sb-stat .val { font-weight: 800; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .sb-stat .val { font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 
     /* ══════════════════════════════════════════════════════════════
        DICE STAGE
@@ -144,22 +144,22 @@
     .roll-number.loss { color: #ef4444; animation: lossPulse 1s ease infinite; }
 
     /* ── Slider de target ─────────────────────────────────────────── */
-    .dice-slider-wrap { padding: 0.5rem 0; }
+    .dice-slider-wrap { padding: 0.8rem 0; }
     .dice-slider {
       -webkit-appearance: none; appearance: none;
-      width: 100%; height: 8px; border-radius: 4px;
+      width: 100%; height: 10px; border-radius: 5px;
       outline: none; cursor: pointer;
       background: #0f1117;
     }
     .dice-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 26px; height: 26px; border-radius: 50%;
-      background: #00e676; border: 3px solid #151822;
-      cursor: pointer; box-shadow: 0 0 12px rgba(0,230,118,0.5);
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #00e676; border: 4px solid #151822;
+      cursor: pointer; box-shadow: 0 0 14px rgba(0,230,118,0.55);
     }
     .dice-slider::-moz-range-thumb {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: #00e676; border: 3px solid #151822;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #00e676; border: 4px solid #151822;
       cursor: pointer;
     }
 
@@ -170,7 +170,8 @@
       .game-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
       .game-sidebar {
         order: 2; border-right: none;
-        border-top: 1px solid #1e2130; padding: 18px 16px;
+        border-top: 1px solid #1e2130; padding: 22px 18px;
+        gap: 18px;
       }
       .game-stage { order: 1; padding: 18px 12px; }
       .dice-card { padding: 2.2rem 1.4rem; min-height: 0; border-radius: 16px; }
@@ -203,12 +204,12 @@
 
     <!-- Target -->
     <div class="sb-group">
-      <div class="sb-label">Target: <span id="targetVal" style="color:#00e676;">50</span></div>
+      <div class="sb-label">Target: <span id="targetVal" style="color:#00e676;font-size:1.1rem;">50</span></div>
       <div class="dice-slider-wrap">
         <input type="range" class="dice-slider" id="targetSlider"
                min="2" max="98" value="50" oninput="updateTarget(this.value)">
       </div>
-      <div style="font-size:10px;color:#6b7280;margin-top:4px;">
+      <div style="font-size:13px;color:#8a92a8;margin-top:8px;">
         Ganás si: <span id="winCondition">dado &gt; 50</span>
       </div>
     </div>
