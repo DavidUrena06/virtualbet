@@ -6,117 +6,173 @@
   <title>VirtualBet — Dice</title>
   <link rel="stylesheet" href="../../css/main.css">
   <style>
-    .dice-display {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 2.5rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
+    /* ══════════════════════════════════════════════════════════════
+       LAYOUT
+    ══════════════════════════════════════════════════════════════ */
+    .game-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - var(--navbar-h));
+      background: #0f1117;
     }
-    .dice-display::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at center, rgba(124,58,237,0.06) 0%, transparent 70%);
-      pointer-events: none;
+    .game-sidebar {
+      background: #151822;
+      border-right: 1px solid #1e2130;
+      padding: 20px 16px;
+      display: flex; flex-direction: column; gap: 18px;
     }
-
-    /* Slider de target */
-    .dice-slider-wrap {
-      position: relative;
-      padding: 1rem 0 0.5rem;
-    }
-    .dice-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-      background: var(--border);
-    }
-    .dice-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--purple-light);
-      border: 3px solid var(--bg-primary);
-      cursor: pointer;
-      box-shadow: 0 0 8px rgba(124,58,237,0.5);
-    }
-    .dice-slider::-moz-range-thumb {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--purple-light);
-      border: 3px solid var(--bg-primary);
-      cursor: pointer;
+    .game-stage {
+      background: #0f1117;
+      padding: 32px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 24px;
     }
 
-    /* Barra de probabilidad con color dinámico */
-    .prob-bar {
-      height: 6px;
-      border-radius: 3px;
-      margin-bottom: 4px;
-      transition: all 0.2s ease;
+    .sb-label {
+      font-size: 11px; color: #6b7280; text-transform: uppercase;
+      letter-spacing: 1px; font-weight: 600; margin-bottom: 8px;
     }
+    .sb-group { display: flex; flex-direction: column; }
+    .sb-input-wrap { position: relative; display: flex; align-items: center; }
+    .sb-input {
+      width: 100%; background: #0f1117; border: 1px solid #1e2130;
+      border-radius: 8px; color: #fff; font-size: 1.25rem; font-weight: 700;
+      padding: 12px 38px 12px 14px; outline: none; font-family: inherit;
+      font-variant-numeric: tabular-nums; transition: border-color 0.15s ease;
+    }
+    .sb-input:focus { border-color: #00e676; }
+    .sb-input::-webkit-outer-spin-button,
+    .sb-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sb-input[type=number] { -moz-appearance: textfield; }
+    .sb-input-suffix {
+      position: absolute; right: 12px; font-size: 1.05rem;
+      pointer-events: none; color: #6b7280;
+    }
+    .sb-quick {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 6px; margin-top: 8px;
+    }
+    .sb-quick button {
+      background: #1e2130; border: none; color: #cbd5e1;
+      font-weight: 600; font-size: 0.78rem; padding: 8px 0;
+      border-radius: 6px; cursor: pointer; font-family: inherit;
+      letter-spacing: 0.5px; transition: all 0.15s ease;
+    }
+    .sb-quick button:hover { background: #2a2f42; color: #fff; }
 
-    /* Resultado animado */
-    .roll-number {
-      font-size: 6rem;
-      font-weight: 900;
-      line-height: 1;
-      transition: all 0.3s ease;
-      font-variant-numeric: tabular-nums;
+    .sb-action { margin-top: auto; }
+    .btn-play {
+      width: 100%; background: #00e676; color: #000;
+      font-weight: 600; font-size: 0.95rem; padding: 14px;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.5px;
+      transition: all 0.15s ease;
     }
-    .roll-number.rolling {
-      animation: rollFlicker 0.5s steps(1) infinite;
+    .btn-play:hover:not(:disabled) {
+      background: #00ff88; box-shadow: 0 4px 16px rgba(0,230,118,0.3);
     }
-    @keyframes rollFlicker {
-      0%   { opacity: 1; }
-      50%  { opacity: 0.3; }
-      100% { opacity: 1; }
-    }
-    @keyframes winPulse {
-      0%   { text-shadow: 0 0 20px rgba(0,255,136,0.8); }
-      50%  { text-shadow: 0 0 60px rgba(0,255,136,1); }
-      100% { text-shadow: 0 0 20px rgba(0,255,136,0.8); }
-    }
-    @keyframes lossPulse {
-      0%   { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
-      50%  { text-shadow: 0 0 60px rgba(239,68,68,1); }
-      100% { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
-    }
-    .roll-number.win  { color: var(--green-neon); animation: winPulse 1s ease infinite; }
-    .roll-number.loss { color: var(--red-accent);  animation: lossPulse 1s ease infinite; }
+    .btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Toggle OVER / UNDER */
+    /* ── Direction toggle ─────────────────────────────────────────── */
     .direction-toggle {
-      display: flex;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
+      display: flex; background: #0f1117;
+      border: 1px solid #1e2130; border-radius: 8px;
       overflow: hidden;
     }
     .direction-toggle button {
-      flex: 1;
-      padding: 0.75rem;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      letter-spacing: 1px;
+      flex: 1; padding: 11px 0; border: none;
+      background: transparent; color: #6b7280;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s ease; letter-spacing: 1px;
+      font-family: inherit;
     }
     .direction-toggle button.active {
-      background: var(--purple);
+      background: #00e676; color: #000;
+    }
+
+    /* ── Stats sidebar mini ──────────────────────────────────────── */
+    .sb-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .sb-stat {
+      background: #0f1117; border: 1px solid #1e2130;
+      border-radius: 8px; padding: 8px 4px; text-align: center;
+    }
+    .sb-stat .lbl {
+      font-size: 9px; color: #6b7280; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 3px;
+    }
+    .sb-stat .val { font-weight: 800; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+    /* ══════════════════════════════════════════════════════════════
+       DICE STAGE
+    ══════════════════════════════════════════════════════════════ */
+    .dice-card {
+      background: #151822; border: 1px solid #1e2130;
+      border-radius: 16px; padding: 2.5rem 2rem;
+      text-align: center; max-width: 560px; width: 100%;
+      position: relative; overflow: hidden;
+    }
+    .dice-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0,230,118,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .roll-number {
+      font-size: 6.5rem; font-weight: 900; line-height: 1;
+      transition: all 0.3s ease;
+      font-variant-numeric: tabular-nums;
       color: #fff;
+    }
+    .roll-number.rolling { animation: rollFlicker 0.5s steps(1) infinite; }
+    @keyframes rollFlicker {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.35; }
+    }
+    @keyframes winPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(0,230,118,0.8); }
+      50%      { text-shadow: 0 0 60px rgba(0,230,118,1); }
+    }
+    @keyframes lossPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
+      50%      { text-shadow: 0 0 60px rgba(239,68,68,1); }
+    }
+    .roll-number.win  { color: #00e676; animation: winPulse  1s ease infinite; }
+    .roll-number.loss { color: #ef4444; animation: lossPulse 1s ease infinite; }
+
+    /* ── Slider de target ─────────────────────────────────────────── */
+    .dice-slider-wrap { padding: 0.5rem 0; }
+    .dice-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 8px; border-radius: 4px;
+      outline: none; cursor: pointer;
+      background: #0f1117;
+    }
+    .dice-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #00e676; border: 3px solid #151822;
+      cursor: pointer; box-shadow: 0 0 12px rgba(0,230,118,0.5);
+    }
+    .dice-slider::-moz-range-thumb {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #00e676; border: 3px solid #151822;
+      cursor: pointer;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       MOBILE
+    ══════════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .game-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .game-sidebar {
+        order: 2; border-right: none;
+        border-top: 1px solid #1e2130; padding: 18px 16px;
+      }
+      .game-stage { order: 1; padding: 18px 14px; }
+      .dice-card { padding: 1.8rem 1.2rem; }
+      .roll-number { font-size: 5rem; }
+      .sb-action { margin-top: 12px; }
     }
   </style>
 </head>
@@ -124,117 +180,113 @@
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 
-<main class="container page">
-  <div class="game-area">
+<div class="game-shell">
 
-    <!-- Display principal del dado -->
-    <div class="dice-display" style="margin-bottom:1.5rem;">
-      <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;
-                  letter-spacing:2px;margin-bottom:1rem;">Resultado</div>
+  <!-- ────────── Sidebar ────────── -->
+  <aside class="game-sidebar">
+
+    <!-- Dirección -->
+    <div class="sb-group">
+      <div class="sb-label">Dirección</div>
+      <div class="direction-toggle">
+        <button id="btnUnder" onclick="setDirection('UNDER')">UNDER</button>
+        <button id="btnOver"  onclick="setDirection('OVER')" class="active">OVER</button>
+      </div>
+    </div>
+
+    <!-- Target -->
+    <div class="sb-group">
+      <div class="sb-label">Target: <span id="targetVal" style="color:#00e676;">50</span></div>
+      <div class="dice-slider-wrap">
+        <input type="range" class="dice-slider" id="targetSlider"
+               min="2" max="98" value="50" oninput="updateTarget(this.value)">
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:4px;">
+        Ganás si: <span id="winCondition">dado &gt; 50</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sb-group">
+      <div class="sb-label">Probabilidades</div>
+      <div class="sb-stats">
+        <div class="sb-stat">
+          <div class="lbl">Chance</div>
+          <div class="val" style="color:#00e676;" id="winChance">49%</div>
+        </div>
+        <div class="sb-stat">
+          <div class="lbl">Mult.</div>
+          <div class="val" style="color:#ffb020;" id="multiplier">2.00x</div>
+        </div>
+        <div class="sb-stat">
+          <div class="lbl">Pago</div>
+          <div class="val" style="color:#fff;" id="potentialWin">0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apuesta -->
+    <div class="sb-group">
+      <div class="sb-label">Apuesta</div>
+      <div class="sb-input-wrap">
+        <input class="sb-input" type="number" id="betAmount"
+               min="1" value="10" step="1" oninput="updatePotential()">
+        <span class="sb-input-suffix">🪙</span>
+      </div>
+      <div class="sb-quick">
+        <button onclick="setBet(10)">10</button>
+        <button onclick="setBet(50)">50</button>
+        <button onclick="setBet(100)">100</button>
+        <button onclick="setMaxBet()">MAX</button>
+      </div>
+    </div>
+
+    <!-- Botón -->
+    <div class="sb-action">
+      <button class="btn-play" id="playBtn" onclick="playDice()">
+        🎲 Tirar dado
+      </button>
+    </div>
+  </aside>
+
+  <!-- ────────── Stage ────────── -->
+  <section class="game-stage">
+
+    <div class="dice-card">
+      <div style="font-size:11px;color:#6b7280;text-transform:uppercase;
+                  letter-spacing:2px;margin-bottom:1.5rem;">Resultado</div>
 
       <div class="roll-number" id="rollDisplay">—</div>
 
       <div id="resultLabel" style="margin-top:1rem;font-size:1rem;font-weight:600;
-                                   color:var(--text-muted);min-height:28px;">
+                                   color:#6b7280;min-height:28px;">
         Tirá el dado
       </div>
 
-      <!-- Barra de zona ganadora/perdedora -->
-      <div style="margin-top:1.5rem;">
+      <div style="margin-top:2rem;">
         <div style="display:flex;justify-content:space-between;
-                    font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">
+                    font-size:0.72rem;color:#6b7280;margin-bottom:8px;">
           <span>0</span>
-          <span id="targetLabel" style="color:var(--purple-light);font-weight:700;">Target: 50</span>
+          <span id="targetLabel" style="color:#00e676;font-weight:700;">Target: 50</span>
           <span>100</span>
         </div>
-        <div style="position:relative;height:6px;border-radius:3px;
-                    overflow:hidden;background:var(--border);">
+        <div style="position:relative;height:8px;border-radius:4px;
+                    overflow:hidden;background:#1e2130;">
           <div id="winZone" style="position:absolute;top:0;height:100%;
-                                   background:rgba(0,255,136,0.4);border-radius:3px;
+                                   background:rgba(0,230,118,0.4);border-radius:4px;
                                    transition:all 0.2s ease;"></div>
-          <div id="targetMarker" style="position:absolute;top:-3px;width:2px;height:12px;
-                                        background:var(--purple-light);border-radius:1px;
+          <div id="targetMarker" style="position:absolute;top:-3px;width:2px;height:14px;
+                                        background:#00e676;border-radius:1px;
                                         transition:left 0.2s ease;"></div>
         </div>
       </div>
     </div>
-
-    <!-- Controles -->
-    <div class="bet-controls">
-
-      <!-- Dirección OVER / UNDER -->
-      <div class="form-group">
-        <label class="form-label">Dirección</label>
-        <div class="direction-toggle">
-          <button id="btnUnder" onclick="setDirection('UNDER')">UNDER</button>
-          <button id="btnOver"  onclick="setDirection('OVER')" class="active">OVER</button>
-        </div>
-      </div>
-
-      <!-- Slider de target -->
-      <div class="form-group">
-        <label class="form-label">
-          Target: <span id="targetVal">50</span>
-          &nbsp;·&nbsp;
-          Ganar si: <span id="winCondition">dado &gt; 50</span>
-        </label>
-        <div class="dice-slider-wrap">
-          <input type="range" class="dice-slider" id="targetSlider"
-                 min="2" max="98" value="50" oninput="updateTarget(this.value)">
-        </div>
-      </div>
-
-      <!-- Stats calculados -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
-                    padding:10px;text-align:center;">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">CHANCE</div>
-          <div style="font-weight:800;color:var(--purple-light);" id="winChance">49%</div>
-        </div>
-        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
-                    padding:10px;text-align:center;">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">MULTIPLICADOR</div>
-          <div style="font-weight:800;color:var(--gold);" id="multiplier">2.00x</div>
-        </div>
-        <div style="background:var(--bg-secondary);border-radius:var(--radius-md);
-                    padding:10px;text-align:center;">
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">GANANCIA</div>
-          <div style="font-weight:800;color:var(--green-neon);" id="potentialWin">0.00 🪙</div>
-        </div>
-      </div>
-
-      <!-- Monto de apuesta -->
-      <div class="form-group">
-        <label class="form-label">Apuesta</label>
-        <div class="input-group">
-          <input class="form-input" type="number" id="betAmount"
-                 min="1" max="10000" value="10" step="1"
-                 oninput="updatePotential()">
-          <span class="input-group__suffix">🪙</span>
-        </div>
-        <div class="multiplier-presets" style="margin-top:8px;">
-          <button onclick="setBet(10)">10</button>
-          <button onclick="setBet(50)">50</button>
-          <button onclick="setBet(100)">100</button>
-          <button onclick="setBet(500)">500</button>
-          <button onclick="setHalfBet()">½</button>
-          <button onclick="setMaxBet()">MAX</button>
-        </div>
-      </div>
-
-      <!-- Botón de jugar -->
-      <button class="btn btn--orange btn--full btn--lg" id="playBtn" onclick="playDice()">
-        🎲 Tirar dado
-      </button>
-
-    </div>
-
-  </div>
-</main>
+  </section>
+</div>
 
 <script src="../../js/api.js"></script>
 <script src="../js/navbar.js"></script>
@@ -243,19 +295,17 @@
 
   let direction = 'OVER';
   let currentBalance = 0;
-  const HOUSE_EDGE = 0.01; // 1%
+  const HOUSE_EDGE = 0.03; // alineado con backend HOUSE_EDGE env
 
-  // ─── Carga balance inicial ─────────────────────────────────────────────────
   async function loadBalance() {
     try {
       const data = await VB.wallet.balance();
       currentBalance = parseFloat(data.wallet.balance);
       document.getElementById('navBalance').textContent =
         currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
-    } catch (e) { /* silent */ }
+    } catch (e) {}
   }
 
-  // ─── Actualiza dirección ───────────────────────────────────────────────────
   function setDirection(dir) {
     direction = dir;
     document.getElementById('btnOver').classList.toggle('active', dir === 'OVER');
@@ -263,7 +313,6 @@
     updateTarget(document.getElementById('targetSlider').value);
   }
 
-  // ─── Actualiza target y recalcula stats ───────────────────────────────────
   function updateTarget(val) {
     const target = parseInt(val);
     document.getElementById('targetVal').textContent = target;
@@ -275,14 +324,11 @@
     const chancePercent = (winChance * 100).toFixed(1);
 
     document.getElementById('winCondition').innerHTML =
-      isOver
-        ? `dado &gt; ${target}`
-        : `dado &lt; ${target}`;
+      isOver ? `dado &gt; ${target}` : `dado &lt; ${target}`;
 
     document.getElementById('winChance').textContent = chancePercent + '%';
-    document.getElementById('multiplier').textContent = multiplier.toFixed(4) + 'x';
+    document.getElementById('multiplier').textContent = multiplier.toFixed(2) + 'x';
 
-    // Zona ganadora en la barra
     const winZone = document.getElementById('winZone');
     const marker  = document.getElementById('targetMarker');
     const pct     = target;
@@ -290,18 +336,15 @@
     if (isOver) {
       winZone.style.left  = pct + '%';
       winZone.style.width = (100 - pct) + '%';
-      winZone.style.background = 'rgba(0,255,136,0.4)';
     } else {
       winZone.style.left  = '0%';
       winZone.style.width = pct + '%';
-      winZone.style.background = 'rgba(0,255,136,0.4)';
     }
     marker.style.left = pct + '%';
 
     updatePotential();
   }
 
-  // ─── Actualiza ganancia potencial ─────────────────────────────────────────
   function updatePotential() {
     const bet    = parseFloat(document.getElementById('betAmount').value) || 0;
     const target = parseInt(document.getElementById('targetSlider').value);
@@ -309,24 +352,19 @@
     const winChance = isOver ? (100 - target) / 100 : target / 100;
     const multiplier = (1 / winChance) * (1 - HOUSE_EDGE);
     const win = bet * multiplier;
-    document.getElementById('potentialWin').textContent =
-      win.toFixed(2) + ' 🪙';
+    document.getElementById('potentialWin').textContent = win.toFixed(2);
   }
 
-  // ─── Helpers de apuesta ───────────────────────────────────────────────────
   function setBet(amount) {
-    document.getElementById('betAmount').value = Math.min(amount, 10000);
+    document.getElementById('betAmount').value = amount;
     updatePotential();
   }
   function setHalfBet() {
     const curr = parseFloat(document.getElementById('betAmount').value) || 10;
     setBet(Math.max(1, Math.floor(curr / 2)));
   }
-  function setMaxBet() {
-    setBet(Math.min(currentBalance, 10000));
-  }
+  function setMaxBet() { setBet(Math.max(1, Math.floor(currentBalance))); }
 
-  // ─── Animación de número rodando ──────────────────────────────────────────
   function animateRoll(finalNumber) {
     return new Promise(resolve => {
       const el = document.getElementById('rollDisplay');
@@ -349,7 +387,6 @@
     });
   }
 
-  // ─── Jugar ────────────────────────────────────────────────────────────────
   async function playDice() {
     const betAmount = parseFloat(document.getElementById('betAmount').value);
     const target    = parseInt(document.getElementById('targetSlider').value);
@@ -371,23 +408,21 @@
     try {
       const data = await VB.games.dice({ betAmount, target, direction });
 
-      // Anima el número
       await animateRoll(data.roll);
 
       const el = document.getElementById('rollDisplay');
       if (data.result === 'WIN') {
         el.className = 'roll-number win';
         resultLabel.innerHTML =
-          `<span style="color:var(--green-neon)">✓ GANASTE ${data.payout.toFixed(2)} 🪙</span>`;
+          `<span style="color:#00e676">✓ GANASTE ${data.payout.toFixed(2)} 🪙</span>`;
         showToast(`¡Ganaste ${data.payout.toFixed(2)} monedas! 🎉`, 'success');
       } else {
         el.className = 'roll-number loss';
         resultLabel.innerHTML =
-          `<span style="color:var(--red-accent)">✗ PERDISTE ${betAmount.toFixed(2)} 🪙</span>`;
+          `<span style="color:#ef4444">✗ PERDISTE ${betAmount.toFixed(2)} 🪙</span>`;
         showToast('Perdiste esta vez. ¡Intentá de nuevo!', 'error');
       }
 
-      // Actualiza balance
       currentBalance = data.newBalance;
       document.getElementById('navBalance').textContent =
         currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
@@ -400,7 +435,6 @@
     }
   }
 
-  // Inicializa
   loadBalance();
   updateTarget(50);
 </script>

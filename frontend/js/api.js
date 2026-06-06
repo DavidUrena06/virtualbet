@@ -81,7 +81,6 @@ const VB = {
     minesReveal:  (d) => api.post('/games/mines/reveal',  d),
     minesCashout: (d) => api.post('/games/mines/cashout', d),
     plinko:       (d) => api.post('/games/plinko',        d),
-    roulette:     (d) => api.post('/games/roulette',      d),
     history:      (page=1, type='') =>
       api.get(`/games/history?page=${page}${type ? '&gameType=' + type : ''}`),
   },
