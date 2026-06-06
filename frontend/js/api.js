@@ -77,6 +77,7 @@ const VB = {
     coinflip:     (d) => api.post('/games/coinflip',      d),
     crashStart:   (d) => api.post('/games/crash/start',   d),
     crashCashout: (d) => api.post('/games/crash/cashout', d),
+    crashStatus:  (roundId) => api.get(`/games/crash/status?roundId=${encodeURIComponent(roundId)}`),
     minesStart:   (d) => api.post('/games/mines/start',   d),
     minesReveal:  (d) => api.post('/games/mines/reveal',  d),
     minesCashout: (d) => api.post('/games/mines/cashout', d),

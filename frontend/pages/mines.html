@@ -11,7 +11,7 @@
     ══════════════════════════════════════════════════════════════ */
     .game-shell {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 200px 1fr;
       min-height: calc(100vh - var(--navbar-h));
       background: #0f1117;
     }
@@ -19,20 +19,20 @@
     .game-sidebar {
       background: #151822;
       border-right: 1px solid #1e2130;
-      padding: 20px 16px;
+      padding: 20px 14px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
     }
 
     .game-stage {
       background: #0f1117;
-      padding: 28px 24px;
+      padding: 20px 18px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 18px;
     }
 
     /* ── Tipografía e inputs del sidebar ──────────────────────────── */
@@ -146,14 +146,14 @@
     /* ── Multiplier display del stage ─────────────────────────────── */
     .mult-display {
       text-align: center;
-      padding: 16px 28px;
+      padding: 18px 32px;
       background: #151822;
       border: 1px solid #1e2130;
       border-radius: 12px;
-      min-width: 260px;
+      min-width: 320px;
     }
     .mult-display .mult-value {
-      font-size: 2.4rem;
+      font-size: 3rem;
       font-weight: 800;
       color: #00e676;
       line-height: 1;
@@ -178,20 +178,22 @@
     .mines-board {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
+      gap: 12px;
       width: 100%;
-      max-width: 460px;
+      min-width: 380px;
+      max-width: 560px;
       aspect-ratio: 1;
+      min-height: 480px;
     }
     .mine-cell {
       aspect-ratio: 1;
-      border-radius: 10px;
+      border-radius: 12px;
       background: #1a1f2e;
       border: 1px solid #1e2130;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.9rem;
+      font-size: 2.4rem;
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
       user-select: none;
@@ -249,12 +251,13 @@
       }
       .game-stage {
         order: 1;
-        padding: 18px 14px;
+        padding: 14px 10px;
       }
-      .mines-board { max-width: 340px; }
+      .mines-board { min-width: 0; max-width: 380px; min-height: 0; }
+      .mine-cell { font-size: 2rem; }
       .sb-action { margin-top: 12px; }
-      .mult-display { padding: 12px 18px; min-width: 0; width: 100%; max-width: 340px; }
-      .mult-display .mult-value { font-size: 2rem; }
+      .mult-display { padding: 14px 20px; min-width: 0; width: 100%; max-width: 380px; }
+      .mult-display .mult-value { font-size: 2.2rem; }
     }
   </style>
 </head>

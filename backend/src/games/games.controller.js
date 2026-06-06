@@ -163,6 +163,70 @@ const startCrash = async (req, res) => {
   }
 };
 
+// ─── Status check (sin consumir la ronda) — usado para auto-eject ──────
+const getCrashStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { roundId } = req.query;
+
+    if (!roundId) {
+      return res.status(400).json({ error: 'roundId requerido' });
+    }
+
+    const round = global.crashRounds?.get(roundId);
+    if (!round) {
+      // Ronda no existe (ya terminó, expiró, o nunca existió)
+      return res.json({ status: 'ended' });
+    }
+
+    if (round.userId !== userId) {
+      return res.status(403).json({ error: 'Esta ronda no te pertenece' });
+    }
+
+    // Calcula el multiplicador esperado para el tiempo transcurrido,
+    // usando la misma fórmula que el frontend: e^(0.06 * elapsed)
+    const elapsed = (Date.now() - round.startedAt) / 1000;
+    const currentMult = Math.pow(Math.E, 0.06 * elapsed);
+
+    if (currentMult >= round.crashPoint) {
+      // Crasheó — auto-finalizamos sin payout (el jugador no cashout a tiempo)
+      global.crashRounds.delete(roundId);
+
+      await prisma.gameHistory.create({
+        data: {
+          userId,
+          gameType:   'CRASH',
+          betAmount:  round.betAmount,
+          multiplier: 0,
+          payout:     0,
+          result:     'LOSS',
+          gameData:   {
+            cashoutAt:   null,
+            crashPoint:  round.crashPoint,
+            won:         false,
+            autoEjected: true,
+          },
+        },
+      });
+
+      return res.json({
+        status:     'crashed',
+        crashPoint: round.crashPoint,
+        betAmount:  round.betAmount,
+      });
+    }
+
+    return res.json({
+      status:      'running',
+      currentMult: parseFloat(currentMult.toFixed(2)),
+      elapsed,
+    });
+  } catch (error) {
+    console.error('[CRASH] getStatus:', error.message);
+    res.status(500).json({ error: 'Error al consultar estado' });
+  }
+};
+
 const cashoutCrash = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -577,6 +641,7 @@ module.exports = {
   playCoinflip,
   startCrash,
   cashoutCrash,
+  getCrashStatus,
   getGameHistory,
   startMines,
   revealCell,

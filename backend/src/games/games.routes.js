@@ -10,6 +10,7 @@ const {
   playCoinflip,
   startCrash,
   cashoutCrash,
+  getCrashStatus,
   getGameHistory,
   startMines,
   revealCell,
@@ -50,6 +51,9 @@ router.post('/crash/cashout', [
   body('roundId').notEmpty().withMessage('roundId requerido'),
   body('cashoutAt').isFloat({ min: 1.01 }).withMessage('Cashout mínimo: 1.01x'),
 ], cashoutCrash);
+
+// GET /api/games/crash/status?roundId=xxx — polling sin consumir la ronda
+router.get('/crash/status', getCrashStatus);
 
 // ─── Mines ────────────────────────────────────────────────────────────────────
 router.post('/mines/start', [
