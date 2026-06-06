@@ -11,24 +11,24 @@
     ══════════════════════════════════════════════════════════════ */
     .game-shell {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 200px 1fr;
       min-height: calc(100vh - var(--navbar-h));
       background: #0f1117;
     }
     .game-sidebar {
       background: #151822;
       border-right: 1px solid #1e2130;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .game-stage {
-      background: #0f1117;
-      padding: 24px;
+      padding: 20px 14px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+    }
+    .game-stage {
+      background: #0f1117;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     /* ── Sidebar shared ───────────────────────────────────────────── */
@@ -139,16 +139,16 @@
       position: relative;
       overflow: hidden;
       flex: 1;
-      min-height: 340px;
+      min-height: 540px;
     }
     #crashCanvas {
-      width: 100%; height: 100%; min-height: 320px;
+      width: 100%; height: 100%; min-height: 520px;
       display: block; border-radius: 8px;
     }
     .crash-multiplier {
       position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 5.2rem; font-weight: 900;
+      font-size: 6.5rem; font-weight: 900;
       pointer-events: none; text-align: center; line-height: 1;
       transition: color 0.3s ease;
       text-shadow: 0 0 40px currentColor;
@@ -164,50 +164,55 @@
       pointer-events: none; white-space: nowrap;
     }
 
-    /* ── Overlay game over ────────────────────────────────────────── */
+    /* ── Overlay game over (auto-eject) ─────────────────────────── */
     .crash-overlay {
       position: absolute; inset: 0;
-      background: radial-gradient(ellipse at center, rgba(239,68,68,0.95) 0%, rgba(120,10,10,0.98) 70%, rgba(40,0,0,1) 100%);
+      background: rgba(220, 38, 38, 0.85);
       display: none; flex-direction: column;
       align-items: center; justify-content: center;
       z-index: 10; border-radius: 16px; pointer-events: none;
+      backdrop-filter: blur(2px);
     }
     .crash-overlay.show {
       display: flex;
-      animation: crashFlash 0.6s ease, crashShake 0.5s cubic-bezier(.36,.07,.19,.97) 0.05s;
+      animation: crashFlash 0.45s ease;
     }
     .crash-overlay__title {
-      font-size: 3.5rem; font-weight: 900; letter-spacing: 4px;
-      color: #fff; text-shadow: 0 0 30px rgba(255,255,255,0.6), 0 4px 12px rgba(0,0,0,0.5);
-      margin-bottom: 0.3rem;
-      animation: crashTitlePop 0.4s cubic-bezier(.34,1.56,.64,1);
+      font-size: 5rem; font-weight: 900; letter-spacing: 6px;
+      color: #fff;
+      text-shadow: 0 0 40px rgba(255,255,255,0.7), 0 4px 16px rgba(0,0,0,0.5);
+      margin-bottom: 0.4rem;
+      animation: crashTitleShake 0.55s cubic-bezier(.36,.07,.19,.97);
     }
     .crash-overlay__mult {
-      font-size: 4.5rem; font-weight: 900; color: #fff; line-height: 1;
-      text-shadow: 0 0 40px rgba(255,255,255,0.7); margin-bottom: 0.5rem;
+      font-size: 3rem; font-weight: 900; color: #fff; line-height: 1;
+      text-shadow: 0 0 30px rgba(255,255,255,0.6);
+      margin-bottom: 0.6rem;
       font-variant-numeric: tabular-nums;
-      animation: crashTitlePop 0.5s cubic-bezier(.34,1.56,.64,1) 0.1s both;
+      animation: crashTitlePop 0.45s cubic-bezier(.34,1.56,.64,1) 0.1s both;
     }
     .crash-overlay__sub {
-      font-size: 1rem; font-weight: 700; letter-spacing: 2px;
-      color: rgba(255,255,255,0.85); text-transform: uppercase;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;
+      color: rgba(255,255,255,0.95);
       animation: crashTitlePop 0.4s ease 0.2s both;
     }
     @keyframes crashFlash {
-      0%   { filter: brightness(2.5); }
-      40%  { filter: brightness(1.2); }
-      100% { filter: brightness(1); }
+      0%   { filter: brightness(3); opacity: 0; }
+      30%  { filter: brightness(1.4); opacity: 1; }
+      100% { filter: brightness(1); opacity: 1; }
     }
-    @keyframes crashShake {
-      10%, 90%  { transform: translate3d(-2px, 0, 0); }
-      20%, 80%  { transform: translate3d(4px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
-      40%, 60%  { transform: translate3d(8px, 0, 0); }
+    @keyframes crashTitleShake {
+      0%   { transform: scale(0.5) translate3d(0, 0, 0); opacity: 0; }
+      40%  { transform: scale(1.15) translate3d(-6px, 0, 0); opacity: 1; }
+      55%  { transform: scale(1.1)  translate3d(6px, 0, 0); }
+      70%  { transform: scale(1.05) translate3d(-4px, 0, 0); }
+      85%  { transform: scale(1.02) translate3d(4px, 0, 0); }
+      100% { transform: scale(1)    translate3d(0, 0, 0); opacity: 1; }
     }
     @keyframes crashTitlePop {
-      0%   { transform: scale(0.4) rotate(-5deg); opacity: 0; }
-      60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
-      100% { transform: scale(1) rotate(0); opacity: 1; }
+      0%   { transform: scale(0.4); opacity: 0; }
+      60%  { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     /* ══════════════════════════════════════════════════════════════
@@ -220,11 +225,13 @@
         border-top: 1px solid #1e2130;
         padding: 18px 16px;
       }
-      .game-stage { order: 1; padding: 16px 14px; }
-      .crash-canvas-wrap { min-height: 280px; }
-      .crash-multiplier { font-size: 4rem; }
-      .crash-overlay__title { font-size: 2.5rem; letter-spacing: 3px; }
-      .crash-overlay__mult { font-size: 3.5rem; }
+      .game-stage { order: 1; padding: 12px 10px; }
+      .crash-canvas-wrap { min-height: 360px; }
+      #crashCanvas { min-height: 340px; }
+      .crash-multiplier { font-size: 4.5rem; }
+      .crash-overlay__title { font-size: 3.5rem; letter-spacing: 4px; }
+      .crash-overlay__mult { font-size: 2.2rem; }
+      .crash-overlay__sub  { font-size: 0.95rem; }
       .sb-action { margin-top: 12px; }
     }
   </style>
@@ -332,6 +339,10 @@
   let crashHistory = [];
   let autoCashoutAt = 0;     // 0 = desactivado
   let autoCashedOut = false; // flag para evitar doble trigger
+
+  // ── Polling de estado del servidor — para auto-eject cuando crashea ─────
+  let pollInterval = null;   // setInterval id
+  let polling = false;       // flag de re-entrancia (evita pollings solapados)
 
   let graphPoints = [];
 
@@ -441,6 +452,75 @@
     });
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // POLLING + AUTO-EJECT
+  // ══════════════════════════════════════════════════════════════════════
+
+  // Para el polling y la animación, limpia estado de la ronda
+  function stopRoundActivity() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    if (animFrame)    { cancelAnimationFrame(animFrame); animFrame = null; }
+  }
+
+  // Auto-eject: el servidor confirmó que la ronda crasheó pero el jugador no cashout
+  function autoEjectFromBust(crashPoint, betLost) {
+    // Sólo procesamos una vez
+    if (state !== 'running') return;
+    state = 'crashed';
+
+    // 1. DETENER polling + animación
+    stopRoundActivity();
+
+    // 2. DETENER el contador visual (congelar en el crashPoint)
+    currentMultiplier = crashPoint;
+    document.getElementById('crashMult').className = 'crash-multiplier crashed';
+    document.getElementById('crashMult').textContent = crashPoint.toFixed(2) + 'x';
+
+    // 3. Mostrar overlay rojo con flash + shake
+    showCrashOverlay(crashPoint, betLost);
+    document.getElementById('crashSub').textContent = `Crasheó en ${crashPoint.toFixed(2)}x`;
+    document.getElementById('crashSub').style.color = '#ef4444';
+
+    showToast(`💥 Auto-eject en ${crashPoint.toFixed(2)}x — perdiste ${betLost.toFixed(2)} 🪙`, 'error');
+
+    // 4. Historial
+    addToHistory(crashPoint);
+
+    // 5. Reset UI → vuelve a estado inicial para nueva ronda
+    resetUI();
+  }
+
+  // Polling tick — consulta el estado al backend
+  async function pollCrashStatus() {
+    if (!roundId || state !== 'running' || polling) return;
+    polling = true;
+    try {
+      const data = await VB.games.crashStatus(roundId);
+      // Si entre el await y ahora el estado cambió, ignoramos
+      if (state !== 'running') return;
+
+      if (data.status === 'crashed') {
+        autoEjectFromBust(
+          parseFloat(data.crashPoint),
+          parseFloat(data.betAmount ?? betAmount)
+        );
+      } else if (data.status === 'ended') {
+        // La ronda ya no existe en el servidor — algo raro pasó (ej. reinicio).
+        // Detenemos sin payout (el bet ya fue debitado al inicio).
+        stopRoundActivity();
+        state = 'idle';
+        showToast('La ronda terminó inesperadamente', 'error');
+        resetUI();
+      }
+      // status === 'running' → seguimos
+    } catch (err) {
+      // No matamos el juego si falla un poll — solo logueamos
+      console.error('[crash] poll error:', err.message);
+    } finally {
+      polling = false;
+    }
+  }
+
   // ── Loop de animación ──────────────────────────────────────────────────
   function animationLoop(timestamp) {
     if (!startTime) startTime = timestamp;
@@ -512,6 +592,9 @@
 
       animFrame = requestAnimationFrame(animationLoop);
 
+      // Inicia polling al servidor cada 200ms para detectar el crash automáticamente
+      pollInterval = setInterval(pollCrashStatus, 200);
+
     } catch(err) {
       showToast(err.message, 'error');
       playBtn.disabled = false;
@@ -521,16 +604,18 @@
 
   // ── Overlay dramático cuando crashea ──────────────────────────────────
   function showCrashOverlay(crashPoint, betLost) {
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    // Garantiza animación parada (idempotente — autoEjectFromBust ya lo hizo)
+    stopRoundActivity();
 
     currentMultiplier = crashPoint;
     document.getElementById('crashMult').className = 'crash-multiplier crashed';
     document.getElementById('crashMult').textContent = crashPoint.toFixed(2) + 'x';
 
     const overlay = document.getElementById('crashOverlay');
-    document.getElementById('crashOverlayMult').textContent = crashPoint.toFixed(2) + 'x';
+    document.getElementById('crashOverlayMult').textContent =
+      `Crasheó en ${crashPoint.toFixed(2)}x`;
     document.getElementById('crashOverlaySub').textContent =
-      `Perdiste ${betLost.toFixed(2)} 🪙 — crasheó antes de tu cashout`;
+      `Perdiste ${betLost.toFixed(2)} 🪙`;
     overlay.classList.remove('show');
     void overlay.offsetWidth;
     overlay.classList.add('show');
@@ -546,7 +631,8 @@
 
     const cashoutAt = parseFloat(currentMultiplier.toFixed(2));
 
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    // Para animación + polling antes de cobrar
+    stopRoundActivity();
     const btn = document.getElementById('cashoutBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
