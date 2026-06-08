@@ -140,6 +140,8 @@
     <div class="league-tab" onclick="setLeague('SERIE_A', this)">🇮🇹 Serie A</div>
     <div class="league-tab" onclick="setLeague('CHAMPIONS_LEAGUE', this)">🏆 Champions</div>
     <div class="league-tab" onclick="setLeague('MLS', this)">🇺🇸 MLS</div>
+    <div class="league-tab" onclick="setLeague('COSTA_RICA_FPD', this)">🇨🇷 Liga FPD</div>
+    <div class="league-tab" onclick="setLeague('FIFA_WORLD_CUP', this)">🏆 Mundial</div>
   </div>
 
   <!-- Partidos agrupados por liga -->
@@ -235,17 +237,25 @@
   let selectedOdd     = 0;
   let selectedMatch   = null;
 
-  // Nombres legibles por código de liga
+  // Fallbacks por código de liga (se usa cuando el partido no tiene leagueName real)
   const LEAGUE_LABELS = {
     PREMIER_LEAGUE:   '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',
     LA_LIGA:          '🇪🇸 La Liga',
     SERIE_A:          '🇮🇹 Serie A',
     CHAMPIONS_LEAGUE: '🏆 Champions League',
     MLS:              '🇺🇸 MLS',
+    COSTA_RICA_FPD:   '🇨🇷 Liga FPD',
+    FIFA_WORLD_CUP:   '🏆 FIFA World Cup',
     LIGA_PROMERICA:   '🇨🇷 Liga Promerica',
     CHAMPIONS:        '🏆 Champions',
     PREMIER:          '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier',
   };
+
+  // Devuelve el nombre a mostrar: prefiere leagueName del partido, luego label, luego slug
+  function leagueDisplay(m) {
+    if (m.leagueName) return m.leagueName;
+    return LEAGUE_LABELS[m.league] || (m.league || '').replace(/_/g, ' ');
+  }
 
   async function init() {
     try {
@@ -308,16 +318,16 @@
         return;
       }
 
-      // Agrupa por liga
-      const byLeague = {};
+      // Agrupa por (leagueName si existe, sino league slug)
+      const byGroup = {};
       for (const m of all) {
-        if (!byLeague[m.league]) byLeague[m.league] = [];
-        byLeague[m.league].push(m);
+        const key = m.leagueName || m.league;
+        if (!byGroup[key]) byGroup[key] = { label: leagueDisplay(m), matches: [] };
+        byGroup[key].matches.push(m);
       }
 
       // Renderiza secciones
-      const sections = Object.entries(byLeague).map(([league, matches]) => {
-        const label = LEAGUE_LABELS[league] || league.replace(/_/g, ' ');
+      const sections = Object.values(byGroup).map(({ label, matches }) => {
         const html = matches.map(matchCardHTML).join('');
         return `
           <div class="league-section">
@@ -435,7 +445,7 @@
     selectedOdd     = parseFloat(sel === 'HOME' ? m.oddHome : sel === 'DRAW' ? m.oddDraw : m.oddAway);
 
     const selLabels = { HOME: m.teamHome, DRAW: 'Empate (X)', AWAY: m.teamAway };
-    document.getElementById('modalLeague').textContent     = LEAGUE_LABELS[m.league] || m.league;
+    document.getElementById('modalLeague').textContent     = leagueDisplay(m);
     document.getElementById('modalMatchTitle').textContent = `${m.teamHome} vs ${m.teamAway}`;
     document.getElementById('modalSelection').textContent  = selLabels[sel];
     document.getElementById('modalOdd').textContent        = selectedOdd.toFixed(2) + 'x';
