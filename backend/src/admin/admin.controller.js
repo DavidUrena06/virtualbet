@@ -2,6 +2,8 @@
 
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
+const { resolveMatch: sharedResolveMatch } = require('../sports/resolver');
+const { importMatchesToDB } = require('../sports/importer');
 const prisma = new PrismaClient();
 
 const logAdminAction = async (adminId, action, targetUserId = null, payload = {}, req) => {
@@ -61,6 +63,8 @@ const createMatch = async (req, res) => {
 };
 
 // ══ RESOLVER PARTIDO ═══════════════════════════════════════════════════
+// La lógica de resolución vive en sports/resolver.js para que el cron pueda
+// reutilizarla. Acá sólo validamos input y logueamos la acción.
 const resolveMatch = async (req, res) => {
   try {
     const { matchId, result, scoreHome, scoreAway } = req.body;
@@ -69,61 +73,37 @@ const resolveMatch = async (req, res) => {
       return res.status(400).json({ error: 'Resultado: HOME, DRAW o AWAY' });
     }
 
-    const match = await prisma.match.findUnique({
-      where: { id: matchId }, include: { sportBets: true },
-    });
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
 
-    if (!match)                      return res.status(404).json({ error: 'Partido no encontrado' });
-    if (match.status === 'FINISHED') return res.status(400).json({ error: 'Partido ya resuelto' });
-    if (match.status === 'CANCELLED')return res.status(400).json({ error: 'Partido cancelado' });
+    const { paidSportBets, resolvedP2P, alreadyResolved } = await sharedResolveMatch(
+      matchId, result,
+      { scoreHome: scoreHome ?? 0, scoreAway: scoreAway ?? 0 }
+    );
 
-    let paidSportBets = 0;
-
-    await prisma.$transaction(async (tx) => {
-      await tx.match.update({
-        where: { id: matchId },
-        data: { status: 'FINISHED', result, scoreHome: parseInt(scoreHome)||0, scoreAway: parseInt(scoreAway)||0, resolvedAt: new Date() },
-      });
-
-      for (const bet of match.sportBets) {
-        if (bet.status !== 'PENDING') continue;
-        const won = bet.selection === result;
-        await tx.sportBet.update({ where: { id: bet.id }, data: { status: won ? 'WON' : 'LOST', resolvedAt: new Date() } });
-
-        if (won) {
-          const payout = parseFloat(bet.potentialWin);
-          const wallet = await tx.wallet.findUnique({ where: { userId: bet.userId } });
-          const newBal = parseFloat(wallet.balance) + payout;
-          await tx.wallet.update({ where: { userId: bet.userId }, data: { balance: newBal, totalWon: { increment: payout } } });
-          await tx.transaction.create({
-            data: { userId: bet.userId, walletId: wallet.id, type: 'SPORT_WIN', amount: payout,
-                    balanceBefore: wallet.balance, balanceAfter: newBal,
-                    note: `Ganaste: ${match.teamHome} vs ${match.teamAway}`, reference: bet.id },
-          });
-          await tx.notification.create({
-            data: { userId: bet.userId, type: 'SPORT_BET_RESOLVED', title: 'Apuesta ganada',
-                    message: `Ganaste ${payout.toFixed(2)} BC en ${match.teamHome} vs ${match.teamAway}`,
-                    data: { betId: bet.id, payout } },
-          }).catch(() => {});
-          paidSportBets++;
-        }
-      }
-    });
-
-    const p2pToResolve = await prisma.privateBet.findMany({
-      where: { matchId, status: { in: ['LOCKED', 'OPEN'] } },
-    });
-    let resolvedP2P = 0;
-    for (const pb of p2pToResolve) {
-      if (pb.status === 'OPEN') await prisma.privateBet.update({ where: { id: pb.id }, data: { status: 'LOCKED' } });
-      await resolvePrivateBet(pb.id, result);
-      resolvedP2P++;
+    if (alreadyResolved) {
+      return res.status(400).json({ error: 'Partido ya resuelto' });
     }
 
     await logAdminAction(req.user.id, 'RESOLVE_MATCH', null, { matchId, result, paidSportBets, resolvedP2P }, req);
     res.json({ message: `Resuelto: ${match.teamHome} vs ${match.teamAway} — ${result}`, paidSportBets, resolvedP2P });
   } catch (err) {
     console.error('[ADMIN] resolveMatch:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ══ IMPORTAR PARTIDOS (manual desde admin) ═══════════════════════════════
+const importSports = async (req, res) => {
+  try {
+    const summary = await importMatchesToDB();
+    await logAdminAction(req.user.id, 'IMPORT_SPORTS', null, summary, req);
+    res.json({
+      message: `Importados ${summary.imported} partidos (${summary.skipped} ya existían, ${summary.errors} errores)`,
+      summary,
+    });
+  } catch (err) {
+    console.error('[ADMIN] importSports:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
@@ -267,5 +247,6 @@ const getAdminLogs = async (req, res) => {
 
 module.exports = {
   getAllUsers, giveBetCoins, giveBetCoinsAll, removeBetCoins,
-  banUser, unbanUser, createMatch, resolveMatch, getStats, getAdminLogs,
+  banUser, unbanUser, createMatch, resolveMatch, importSports,
+  getStats, getAdminLogs,
 };

@@ -11,6 +11,7 @@ const {
   unbanUser,
   createMatch,
   resolveMatch,
+  importSports,
   getStats,
   getAdminLogs,
 } = require('./admin.controller');
@@ -42,6 +43,9 @@ router.post('/matches/resolve',   [
   body('matchId').notEmpty(),
   body('result').isIn(['HOME', 'DRAW', 'AWAY']),
 ], resolveMatch);
+
+// Importar partidos desde TheSportsDB
+router.post('/sports/import',     importSports);
 
 // Stats y logs
 router.get('/stats',              getStats);

@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "GameType" ADD VALUE 'BLACKJACK';
+ALTER TYPE "GameType" ADD VALUE 'KENO';

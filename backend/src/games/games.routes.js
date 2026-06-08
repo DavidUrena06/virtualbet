@@ -19,6 +19,9 @@ const {
   playRoulette,
 } = require('./games.controller');
 
+const blackjack = require('./blackjack.controller');
+const keno      = require('./keno.controller');
+
 const router = express.Router();
 router.use(requireAuth);
 
@@ -82,6 +85,26 @@ router.post('/roulette', [
   body('betType').isIn(['number','color','parity','dozen','half']).withMessage('Tipo inválido'),
   body('betValue').notEmpty().withMessage('betValue requerido'),
 ], playRoulette);
+
+// ─── Blackjack ────────────────────────────────────────────────────────────────
+router.post('/blackjack/deal', [
+  body('amount').isFloat({ min: 1, max: 10000 }).withMessage('Apuesta: 1-10,000'),
+], blackjack.deal);
+router.post('/blackjack/hit', [
+  body('gameId').notEmpty().withMessage('gameId requerido'),
+], blackjack.hit);
+router.post('/blackjack/stand', [
+  body('gameId').notEmpty().withMessage('gameId requerido'),
+], blackjack.stand);
+router.post('/blackjack/double', [
+  body('gameId').notEmpty().withMessage('gameId requerido'),
+], blackjack.double);
+
+// ─── Keno ─────────────────────────────────────────────────────────────────────
+router.post('/keno/play', [
+  body('amount').isFloat({ min: 1, max: 10000 }).withMessage('Apuesta: 1-10,000'),
+  body('picks').isArray({ min: 1, max: 10 }).withMessage('Picks: 1-10 números'),
+], keno.play);
 
 // ─── Historial ────────────────────────────────────────────────────────────────
 router.get('/history', getGameHistory);

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VirtualBet — Keno</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    .game-shell {
+      display: grid; grid-template-columns: 300px 1fr;
+      min-height: calc(100vh - var(--navbar-h));
+      background: #0f1117;
+    }
+    .game-sidebar {
+      background: #151822; border-right: 1px solid #1e2130;
+      padding: 28px 22px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+    .game-stage {
+      background: #0f1117; padding: 28px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+    }
+
+    .sb-label {
+      font-size: 13px; color: #8a92a8; text-transform: uppercase;
+      letter-spacing: 1.5px; font-weight: 700; margin-bottom: 12px;
+    }
+    .sb-group { display: flex; flex-direction: column; }
+    .sb-input-wrap { position: relative; display: flex; align-items: center; }
+    .sb-input {
+      width: 100%; background: #0f1117; border: 1.5px solid #1e2130;
+      border-radius: 10px; color: #fff; font-size: 1.6rem; font-weight: 800;
+      padding: 16px 48px 16px 18px; outline: none; font-family: inherit;
+      font-variant-numeric: tabular-nums;
+    }
+    .sb-input:focus { border-color: #00e676; }
+    .sb-input::-webkit-outer-spin-button,
+    .sb-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sb-input[type=number] { -moz-appearance: textfield; }
+    .sb-input-suffix {
+      position: absolute; right: 16px; font-size: 1.3rem;
+      pointer-events: none; color: #6b7280;
+    }
+    .sb-quick {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-top: 12px;
+    }
+    .sb-quick button {
+      background: #1e2130; border: none; color: #cbd5e1;
+      font-weight: 700; font-size: 0.95rem; padding: 12px 0;
+      border-radius: 8px; cursor: pointer; font-family: inherit;
+    }
+    .sb-quick button:hover { background: #2a2f42; color: #fff; }
+
+    .sb-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sb-stat {
+      background: #0f1117; border: 1px solid #1e2130;
+      border-radius: 10px; padding: 14px 8px; text-align: center;
+    }
+    .sb-stat .lbl {
+      font-size: 11px; color: #8a92a8; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 6px; font-weight: 700;
+    }
+    .sb-stat .val { font-weight: 800; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+
+    .sb-action { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+    .btn-play {
+      width: 100%; background: #00e676; color: #000;
+      font-weight: 700; font-size: 1.05rem; padding: 16px;
+      border: none; border-radius: 10px; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+    .btn-play:hover:not(:disabled) { background: #00ff88; box-shadow: 0 4px 18px rgba(0,230,118,0.35); }
+    .btn-play:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-secondary {
+      background: #1e2130; color: #cbd5e1;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #2a2f42; color: #fff; box-shadow: none; }
+
+    /* ── Grid de números ───────────────────────────────────────────── */
+    .keno-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+      max-width: 720px;
+      width: 100%;
+    }
+    .keno-cell {
+      aspect-ratio: 1;
+      background: #1a1f2e;
+      border: 2px solid #1e2130;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 800;
+      color: #6b7280;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      font-variant-numeric: tabular-nums;
+    }
+    .keno-cell:hover:not(.disabled) {
+      background: #232a3d;
+      transform: scale(1.04);
+    }
+    .keno-cell.selected {
+      background: #1e3a8a;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+    .keno-cell.drawn {
+      background: #92400e;
+      border-color: #c2410c;
+      color: #fff;
+      animation: drawPop 0.3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .keno-cell.match {
+      background: #00e676 !important;
+      border-color: #00ff88 !important;
+      color: #0a0a0a !important;
+      animation: matchPulse 0.8s ease infinite;
+    }
+    .keno-cell.disabled { cursor: not-allowed; }
+
+    @keyframes drawPop {
+      0%   { transform: scale(0.5); }
+      60%  { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    @keyframes matchPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.5); transform: scale(1); }
+      50%      { box-shadow: 0 0 0 8px rgba(0,230,118,0); transform: scale(1.05); }
+    }
+
+    .result-banner {
+      width: 100%; max-width: 720px;
+      padding: 18px 24px;
+      border-radius: 14px;
+      text-align: center;
+      font-size: 1.3rem; font-weight: 800;
+      background: #151822; border: 1.5px solid #1e2130;
+      color: #8a92a8;
+      transition: all 0.3s ease;
+      min-height: 70px;
+      display: flex; align-items: center; justify-content: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .result-banner.win  { border-color: #00e676; color: #00e676; background: rgba(0,230,118,0.08); }
+    .result-banner.loss { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.08); }
+
+    @media (max-width: 768px) {
+      .game-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .game-sidebar { order: 2; border-right: none; border-top: 1px solid #1e2130;
+        padding: 22px 18px; gap: 18px; }
+      .game-stage { order: 1; padding: 18px 12px; }
+      .keno-board { gap: 6px; }
+      .keno-cell { font-size: 1.2rem; border-radius: 8px; }
+      .result-banner { font-size: 1.05rem; padding: 14px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
+  <div class="navbar__nav"></div>
+  <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
+</nav>
+
+<div class="game-shell">
+
+  <!-- ────────── Sidebar ────────── -->
+  <aside class="game-sidebar">
+
+    <!-- Stats picks -->
+    <div class="sb-group">
+      <div class="sb-label">Selección</div>
+      <div class="sb-stats">
+        <div class="sb-stat">
+          <div class="lbl">Elegidos</div>
+          <div class="val" style="color:#3b82f6;" id="picksCount">0/10</div>
+        </div>
+        <div class="sb-stat">
+          <div class="lbl">Max mult.</div>
+          <div class="val" style="color:#ffb020;" id="maxMult">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apuesta -->
+    <div class="sb-group" id="betSection">
+      <div class="sb-label">Apuesta</div>
+      <div class="sb-input-wrap">
+        <input class="sb-input" type="number" id="betAmount"
+               min="1" value="10" step="1" oninput="updatePotential()">
+        <span class="sb-input-suffix">🪙</span>
+      </div>
+      <div class="sb-quick">
+        <button onclick="setBet(10)">10</button>
+        <button onclick="setBet(50)">50</button>
+        <button onclick="setBet(100)">100</button>
+        <button onclick="setMaxBet()">MAX</button>
+      </div>
+    </div>
+
+    <!-- Ganancia potencial -->
+    <div class="sb-group">
+      <div class="sb-label">Ganancia potencial</div>
+      <div style="background:#0f1117;border:1.5px solid #1e2130;border-radius:10px;
+                  padding:16px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:800;color:#00e676;
+                    font-variant-numeric:tabular-nums;" id="potentialWin">—</div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="sb-action">
+      <button class="btn-play" id="playBtn" onclick="play()" disabled>🎯 Jugar</button>
+      <button class="btn-play btn-secondary" id="clearBtn" onclick="clearPicks()">Limpiar</button>
+    </div>
+  </aside>
+
+  <!-- ────────── Stage ────────── -->
+  <section class="game-stage">
+
+    <div class="keno-board" id="board"></div>
+
+    <div class="result-banner" id="resultBanner">
+      Elegí entre 1 y 10 números y jugá
+    </div>
+  </section>
+</div>
+
+<script src="../../js/api.js"></script>
+<script src="../js/navbar.js"></script>
+<script>
+  requireLogin();
+
+  const UNIVERSE_MAX = 40;
+  const MAX_PICKS = 10;
+
+  // Tabla de pagos (espejo del backend) — usada solo para mostrar el max mult.
+  const PAYTABLE = {
+    1:  { 1: 2.5 },
+    2:  { 2: 5 },
+    3:  { 2: 1.5,  3: 12 },
+    4:  { 2: 1,    3: 4,    4: 20 },
+    5:  { 3: 1.5,  4: 8,    5: 50 },
+    6:  { 3: 1,    4: 4,    5: 20,  6: 100 },
+    7:  { 4: 2,    5: 10,   6: 50,  7: 200 },
+    8:  { 4: 1.5,  5: 6,    6: 25,  7: 100, 8: 500 },
+    9:  { 4: 1,    5: 4,    6: 15,  7: 50,  8: 200,  9: 1000 },
+    10: { 4: 1,    5: 3,    6: 10,  7: 30,  8: 100,  9: 500,  10: 2000 },
+  };
+
+  let currentBalance = 0;
+  let picks = new Set();
+  let inProgress = false;
+
+  async function loadBalance() {
+    try {
+      const d = await VB.wallet.balance();
+      currentBalance = parseFloat(d.wallet.balance);
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+    } catch(e) {}
+  }
+
+  function buildBoard() {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    for (let n = 1; n <= UNIVERSE_MAX; n++) {
+      const cell = document.createElement('div');
+      cell.className = 'keno-cell';
+      cell.dataset.num = n;
+      cell.textContent = n;
+      cell.onclick = () => togglePick(n);
+      board.appendChild(cell);
+    }
+  }
+
+  function togglePick(n) {
+    if (inProgress) return;
+    if (picks.has(n)) {
+      picks.delete(n);
+    } else {
+      if (picks.size >= MAX_PICKS) {
+        showToast(`Máximo ${MAX_PICKS} números`, 'error');
+        return;
+      }
+      picks.add(n);
+    }
+    refreshCells();
+    updatePicksUI();
+  }
+
+  function refreshCells() {
+    document.querySelectorAll('.keno-cell').forEach(c => {
+      const n = parseInt(c.dataset.num, 10);
+      c.classList.toggle('selected', picks.has(n));
+      c.classList.remove('drawn', 'match');
+    });
+  }
+
+  function maxMultiplierFor(count) {
+    const row = PAYTABLE[count];
+    if (!row) return 0;
+    return Math.max(...Object.values(row));
+  }
+
+  function updatePicksUI() {
+    document.getElementById('picksCount').textContent = `${picks.size}/${MAX_PICKS}`;
+    const maxMult = maxMultiplierFor(picks.size);
+    document.getElementById('maxMult').textContent = maxMult ? `x${maxMult}` : '—';
+
+    const playBtn = document.getElementById('playBtn');
+    playBtn.disabled = picks.size === 0 || inProgress;
+    updatePotential();
+  }
+
+  function updatePotential() {
+    const bet = parseFloat(document.getElementById('betAmount').value) || 0;
+    const max = maxMultiplierFor(picks.size);
+    const el = document.getElementById('potentialWin');
+    if (!bet || !max) { el.textContent = '—'; return; }
+    el.textContent = (bet * max).toFixed(2) + ' 🪙';
+  }
+
+  function setBet(n) { document.getElementById('betAmount').value = n; updatePotential(); }
+  function setMaxBet() { setBet(Math.max(1, Math.floor(currentBalance))); }
+
+  function clearPicks() {
+    if (inProgress) return;
+    picks.clear();
+    refreshCells();
+    updatePicksUI();
+    document.getElementById('resultBanner').className = 'result-banner';
+    document.getElementById('resultBanner').textContent = 'Elegí entre 1 y 10 números y jugá';
+  }
+
+  // ─── Sorteo animado ──────────────────────────────────────────────────
+  async function revealDrawnSequentially(drawn, picksArr) {
+    const picksSet = new Set(picksArr);
+    for (let i = 0; i < drawn.length; i++) {
+      const n = drawn[i];
+      const cell = document.querySelector(`.keno-cell[data-num="${n}"]`);
+      if (cell) {
+        if (picksSet.has(n)) {
+          cell.classList.add('match');
+        } else {
+          cell.classList.add('drawn');
+        }
+      }
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
+  // ─── Jugar ───────────────────────────────────────────────────────────
+  async function play() {
+    if (inProgress) return;
+    const bet = parseFloat(document.getElementById('betAmount').value);
+    if (!bet || bet < 1) { showToast('Apuesta mínima: 1 BC', 'error'); return; }
+    if (bet > currentBalance) { showToast('Saldo insuficiente', 'error'); return; }
+    if (picks.size === 0) { showToast('Elegí al menos 1 número', 'error'); return; }
+
+    const picksArr = [...picks].sort((a, b) => a - b);
+    inProgress = true;
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('clearBtn').disabled = true;
+    document.querySelectorAll('.keno-cell').forEach(c => c.classList.add('disabled'));
+
+    // Reset visual de drawn/match (las selected quedan)
+    document.querySelectorAll('.keno-cell').forEach(c => c.classList.remove('drawn', 'match'));
+
+    document.getElementById('resultBanner').className = 'result-banner';
+    document.getElementById('resultBanner').textContent = 'Sorteando…';
+
+    try {
+      const data = await VB.games.kenoPlay({ amount: bet, picks: picksArr });
+
+      // Anima la revelación
+      await revealDrawnSequentially(data.drawn, picksArr);
+
+      currentBalance = data.newBalance;
+      document.getElementById('navBalance').textContent =
+        currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+
+      const banner = document.getElementById('resultBanner');
+      if (data.result === 'WIN') {
+        banner.className = 'result-banner win';
+        banner.textContent = `${data.matches} coincidencias — Ganaste ${data.payout.toFixed(2)} 🪙 (x${data.multiplier})`;
+        showToast(`¡Ganaste ${data.payout.toFixed(2)} 🪙!`, 'success');
+      } else {
+        banner.className = 'result-banner loss';
+        banner.textContent = `${data.matches} coincidencias — Perdiste ${bet.toFixed(2)} 🪙`;
+        showToast('Sin suerte esta vez', 'error');
+      }
+    } catch(err) {
+      showToast(err.message, 'error');
+    } finally {
+      inProgress = false;
+      document.querySelectorAll('.keno-cell').forEach(c => c.classList.remove('disabled'));
+      document.getElementById('clearBtn').disabled = false;
+      updatePicksUI();
+    }
+  }
+
+  loadBalance();
+  buildBoard();
+  updatePicksUI();
+</script>
+</body>
+</html>

@@ -1,12 +1,13 @@
 // cron/scheduler.js
 // Tareas programadas de VirtualBet:
-// 1. Lockea apuestas P2P cuando inicia el partido (cada minuto)
-// 2. Expira invitaciones P2P pendientes al lockear (mismo ciclo)
-// 3. Ejecuta recargas automáticas de BetCoins (cada minuto)
+// 1. Cada minuto: lockea P2P al inicio del partido + expira invitaciones + recargas
+// 2. Cada 2 min: updateLiveScores() — sincroniza scores y auto-resuelve
+// 3. Cada 6 hs: importMatchesToDB() — trae partidos nuevos de TheSportsDB
 
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
+const { importMatchesToDB, updateLiveScores } = require('../sports/importer');
 const prisma = new PrismaClient();
 
 // ══════════════════════════════════════════════════════════════
@@ -126,5 +127,33 @@ cron.schedule('* * * * *', async () => {
     console.error('[CRON] Error en recargas:', err.message);
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+// SPORTSBOOK AUTOMÁTICO
+// ══════════════════════════════════════════════════════════════
+
+// Cada 2 minutos — scores en vivo + auto-resolución de partidos terminados
+cron.schedule('*/2 * * * *', async () => {
+  try {
+    await updateLiveScores();
+  } catch (err) {
+    console.error('[CRON] updateLiveScores:', err.message);
+  }
+});
+
+// Cada 6 horas — importa nuevos partidos por liga
+cron.schedule('0 */6 * * *', async () => {
+  try {
+    await importMatchesToDB();
+  } catch (err) {
+    console.error('[CRON] importMatchesToDB:', err.message);
+  }
+});
+
+// Una importación inicial al arrancar (delay 30s para no chocar con boot)
+setTimeout(() => {
+  importMatchesToDB().catch(err =>
+    console.error('[CRON] import inicial:', err.message));
+}, 30000);
 
 console.log('[CRON] Scheduler VirtualBet iniciado');

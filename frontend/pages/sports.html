@@ -8,18 +8,66 @@
   <style>
     .league-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
     .league-tab  {
-      padding:5px 14px; border-radius:99px; font-size:0.82rem; font-weight:600;
+      padding:6px 14px; border-radius:99px; font-size:0.82rem; font-weight:600;
       border:1px solid var(--border); background:var(--bg-secondary);
       color:var(--text-secondary); cursor:pointer; transition:all 0.15s;
     }
     .league-tab.active { background:rgba(124,58,237,0.15); border-color:var(--purple); color:var(--purple-light); }
 
+    .league-section { margin-bottom: 1.75rem; }
+    .league-section__header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; margin-bottom: 0.65rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .league-section__title {
+      font-size: 0.85rem; font-weight: 800; color: #cbd5e1;
+      text-transform: uppercase; letter-spacing: 1.5px;
+    }
+    .league-section__count {
+      font-size: 0.72rem; color: var(--text-muted);
+      background: var(--bg-secondary); padding: 2px 8px; border-radius: 99px;
+    }
+
     .match-card {
       background:var(--bg-card); border:1px solid var(--border);
       border-radius:var(--radius-lg); padding:1.1rem;
       margin-bottom:0.7rem; transition:all 0.15s;
+      position: relative;
     }
     .match-card:hover { border-color:var(--border-hover); }
+    .match-card.live { border-color: rgba(0,230,118,0.4); }
+    .match-card.finished { opacity: 0.78; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 99px;
+      font-size: 0.62rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .badge--live {
+      background: rgba(0,230,118,0.18); color: #00e676;
+      animation: livePulse 1.6s ease-in-out infinite;
+    }
+    .badge--auto { background: rgba(59,130,246,0.18); color: #3b82f6; }
+    .badge--final { background: rgba(107,114,128,0.22); color: #cbd5e1; }
+    @keyframes livePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.55); }
+      50%      { box-shadow: 0 0 0 6px rgba(0,230,118,0); }
+    }
+    .badge--live::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: #00e676; box-shadow: 0 0 6px #00e676;
+    }
+
+    .match-score {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800; color: #fff;
+      background: #0f1117; border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 10px;
+      font-size: 0.95rem;
+    }
+    .match-score.live { color: #00e676; border-color: rgba(0,230,118,0.35); }
 
     .odds-row { display:flex; gap:6px; margin-top:0.8rem; }
     .odd-btn  {
@@ -27,8 +75,9 @@
       border:1px solid var(--border); background:var(--bg-secondary);
       cursor:pointer; transition:all 0.15s; text-align:center; font-family:inherit;
     }
-    .odd-btn:hover  { border-color:var(--purple); }
+    .odd-btn:hover:not(:disabled)  { border-color:var(--purple); }
     .odd-btn.active { background:rgba(124,58,237,0.2); border-color:var(--purple); }
+    .odd-btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .odd-label  { font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
     .odd-value  { font-size:1rem; font-weight:800; color:var(--green-neon); }
     .odd-team   { font-size:0.7rem; color:var(--text-secondary); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -57,7 +106,7 @@
 
 <nav class="navbar">
   <a href="./dashboard.html" class="navbar__logo">🎰 VirtualBet</a>
-  <div class="navbar__nav"></div>  <!-- navbar.js lo llena automáticamente -->
+  <div class="navbar__nav"></div>
   <div class="navbar__balance">🪙 <span id="navBalance">—</span></div>
 </nav>
 <main class="container page">
@@ -85,14 +134,15 @@
 
   <!-- Tabs de ligas -->
   <div class="league-tabs">
-    <div class="league-tab active" onclick="setLeague('', this)">Todos</div>
-    <div class="league-tab" onclick="setLeague('LIGA_PROMERICA', this)">🇨🇷 Liga Promerica</div>
+    <div class="league-tab active" onclick="setLeague('', this)">Todas</div>
+    <div class="league-tab" onclick="setLeague('PREMIER_LEAGUE', this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</div>
     <div class="league-tab" onclick="setLeague('LA_LIGA', this)">🇪🇸 La Liga</div>
-    <div class="league-tab" onclick="setLeague('PREMIER', this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</div>
-    <div class="league-tab" onclick="setLeague('CHAMPIONS', this)">🏆 Champions</div>
+    <div class="league-tab" onclick="setLeague('SERIE_A', this)">🇮🇹 Serie A</div>
+    <div class="league-tab" onclick="setLeague('CHAMPIONS_LEAGUE', this)">🏆 Champions</div>
+    <div class="league-tab" onclick="setLeague('MLS', this)">🇺🇸 MLS</div>
   </div>
 
-  <!-- Partidos -->
+  <!-- Partidos agrupados por liga -->
   <div id="matchList">
     <div style="text-align:center;padding:3rem;color:var(--text-muted);">
       <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
@@ -165,7 +215,6 @@
       </button>
     </div>
 
-    <!-- Botón crear P2P desde este partido -->
     <div style="margin-top:10px;text-align:center;">
       <button class="btn btn--ghost btn--full btn--sm" id="createP2PBtn" onclick="goToCreateP2P()">
         🤝 Crear apuesta P2P con amigos para este partido
@@ -185,6 +234,18 @@
   let selectedSel     = null;
   let selectedOdd     = 0;
   let selectedMatch   = null;
+
+  // Nombres legibles por código de liga
+  const LEAGUE_LABELS = {
+    PREMIER_LEAGUE:   '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',
+    LA_LIGA:          '🇪🇸 La Liga',
+    SERIE_A:          '🇮🇹 Serie A',
+    CHAMPIONS_LEAGUE: '🏆 Champions League',
+    MLS:              '🇺🇸 MLS',
+    LIGA_PROMERICA:   '🇨🇷 Liga Promerica',
+    CHAMPIONS:        '🏆 Champions',
+    PREMIER:          '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier',
+  };
 
   async function init() {
     try {
@@ -215,6 +276,7 @@
     loadMatches();
   }
 
+  // Trae UPCOMING + LIVE + FINISHED en paralelo y agrupa por liga
   async function loadMatches() {
     const container = document.getElementById('matchList');
     container.innerHTML = `
@@ -224,71 +286,143 @@
       </div>`;
 
     try {
-      const data = await VB.sports.matches(currentLeague, 'UPCOMING');
+      const [upcoming, live, finished] = await Promise.all([
+        VB.sports.matches(currentLeague, 'UPCOMING').catch(() => ({ matches: [] })),
+        VB.sports.matches(currentLeague, 'LIVE').catch(() => ({ matches: [] })),
+        VB.sports.matches(currentLeague, 'FINISHED').catch(() => ({ matches: [] })),
+      ]);
 
-      if (!data.matches || data.matches.length === 0) {
+      const all = [
+        ...(live.matches || []),
+        ...(upcoming.matches || []),
+        ...((finished.matches || []).slice(0, 8)),
+      ];
+
+      if (all.length === 0) {
         container.innerHTML = `
-          <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
+          <div class="match-card" style="text-align:center;padding:2rem;color:var(--text-muted);">
             <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚽</div>
             No hay partidos ${currentLeague ? 'en esta liga' : 'disponibles'}.<br>
-            <small style="margin-top:4px;display:block;">El admin crea partidos desde el panel de administración.</small>
+            <small style="margin-top:4px;display:block;">El admin puede importar partidos automáticamente desde el panel.</small>
           </div>`;
         return;
       }
 
-      container.innerHTML = data.matches.map(m => `
-        <div class="match-card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-            <div style="min-width:0;flex:1;">
-              <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
-                ${m.league}
-              </div>
-              <div style="font-weight:700;font-size:0.95rem;">
-                ${m.teamHome} <span style="color:var(--text-muted);font-size:0.85rem;">vs</span> ${m.teamAway}
-              </div>
+      // Agrupa por liga
+      const byLeague = {};
+      for (const m of all) {
+        if (!byLeague[m.league]) byLeague[m.league] = [];
+        byLeague[m.league].push(m);
+      }
+
+      // Renderiza secciones
+      const sections = Object.entries(byLeague).map(([league, matches]) => {
+        const label = LEAGUE_LABELS[league] || league.replace(/_/g, ' ');
+        const html = matches.map(matchCardHTML).join('');
+        return `
+          <div class="league-section">
+            <div class="league-section__header">
+              <span class="league-section__title">${label}</span>
+              <span class="league-section__count">${matches.length}</span>
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <div style="font-size:0.68rem;color:var(--text-muted);">Inicia en</div>
-              <div style="font-weight:700;color:var(--gold);font-size:0.85rem;">${timeUntil(m.startsAt)}</div>
-            </div>
-          </div>
+            ${html}
+          </div>`;
+      });
 
-          <div class="odds-row">
-            <button class="odd-btn" onclick="openBetModal(${JSON.stringify(m).split('"').join('&quot;')}, 'HOME')">
-              <div class="odd-label">Local</div>
-              <div class="odd-value">${parseFloat(m.oddHome).toFixed(2)}</div>
-              <div class="odd-team">${m.teamHome}</div>
-            </button>
-            <button class="odd-btn" onclick="openBetModal(${JSON.stringify(m).split('"').join('&quot;')}, 'DRAW')">
-              <div class="odd-label">Empate</div>
-              <div class="odd-value" style="color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</div>
-              <div class="odd-team">X</div>
-            </button>
-            <button class="odd-btn" onclick="openBetModal(${JSON.stringify(m).split('"').join('&quot;')}, 'AWAY')">
-              <div class="odd-label">Visita</div>
-              <div class="odd-value" style="color:var(--blue-accent);">${parseFloat(m.oddAway).toFixed(2)}</div>
-              <div class="odd-team">${m.teamAway}</div>
-            </button>
-          </div>
-
-          <div style="margin-top:8px;text-align:right;">
-            <button class="btn btn--ghost btn--sm"
-              onclick="window.location.href='./p2p.html?matchId=${m.id}&home=${encodeURIComponent(m.teamHome)}&away=${encodeURIComponent(m.teamAway)}'">
-              🤝 Crear P2P con amigos
-            </button>
-          </div>
-        </div>
-      `).join('');
-
+      container.innerHTML = sections.join('');
     } catch (err) {
       container.innerHTML = `
-        <div class="card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+        <div class="match-card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
           Error al cargar partidos: ${err.message}
         </div>`;
     }
   }
 
-  // Recibe el objeto match como string JSON escaped
+  // Renderiza una match-card según status
+  function matchCardHTML(m) {
+    const isLive     = m.status === 'LIVE';
+    const isFinished = m.status === 'FINISHED';
+    const isUpcoming = m.status === 'UPCOMING';
+    const isAuto     = !!m.externalId;
+
+    const badges = [];
+    if (isLive)     badges.push(`<span class="badge badge--live">EN VIVO</span>`);
+    if (isFinished) badges.push(`<span class="badge badge--final">FINAL</span>`);
+    if (isAuto)     badges.push(`<span class="badge badge--auto">AUTO</span>`);
+
+    // Score / hora de inicio
+    let rightSide;
+    if (isLive || isFinished) {
+      const sh = m.scoreHome ?? 0, sa = m.scoreAway ?? 0;
+      rightSide = `<div class="match-score ${isLive ? 'live' : ''}">${sh} — ${sa}</div>`;
+    } else {
+      rightSide = `
+        <div style="text-align:right;">
+          <div style="font-size:0.68rem;color:var(--text-muted);">Inicia en</div>
+          <div style="font-weight:700;color:var(--gold);font-size:0.85rem;">${timeUntil(m.startsAt)}</div>
+        </div>`;
+    }
+
+    // Cuotas: solo se pueden apostar para UPCOMING
+    let oddsRow;
+    if (isUpcoming) {
+      const matchJson = JSON.stringify(m).split('"').join('&quot;');
+      oddsRow = `
+        <div class="odds-row">
+          <button class="odd-btn" onclick="openBetModal(${matchJson}, 'HOME')">
+            <div class="odd-label">Local</div>
+            <div class="odd-value">${parseFloat(m.oddHome).toFixed(2)}</div>
+            <div class="odd-team">${m.teamHome}</div>
+          </button>
+          <button class="odd-btn" onclick="openBetModal(${matchJson}, 'DRAW')">
+            <div class="odd-label">Empate</div>
+            <div class="odd-value" style="color:var(--gold);">${parseFloat(m.oddDraw).toFixed(2)}</div>
+            <div class="odd-team">X</div>
+          </button>
+          <button class="odd-btn" onclick="openBetModal(${matchJson}, 'AWAY')">
+            <div class="odd-label">Visita</div>
+            <div class="odd-value" style="color:var(--blue-accent);">${parseFloat(m.oddAway).toFixed(2)}</div>
+            <div class="odd-team">${m.teamAway}</div>
+          </button>
+        </div>`;
+    } else {
+      // LIVE o FINISHED — muestra cuotas deshabilitadas
+      const winnerLabel = m.result === 'HOME' ? m.teamHome :
+                          m.result === 'AWAY' ? m.teamAway :
+                          m.result === 'DRAW' ? 'Empate' : '';
+      oddsRow = isFinished && m.result
+        ? `<div style="margin-top:0.6rem;font-size:0.8rem;color:#8a92a8;">
+             Ganador: <strong style="color:#00e676;">${winnerLabel}</strong>
+           </div>`
+        : `<div style="margin-top:0.6rem;font-size:0.78rem;color:#8a92a8;">
+             ${isLive ? 'Apuestas cerradas durante el partido' : ''}
+           </div>`;
+    }
+
+    const p2pBtn = isUpcoming ? `
+      <div style="margin-top:8px;text-align:right;">
+        <button class="btn btn--ghost btn--sm"
+          onclick="window.location.href='./p2p.html?matchId=${m.id}&home=${encodeURIComponent(m.teamHome)}&away=${encodeURIComponent(m.teamAway)}'">
+          🤝 Crear P2P con amigos
+        </button>
+      </div>` : '';
+
+    return `
+      <div class="match-card ${isLive ? 'live' : isFinished ? 'finished' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${badges.join('')}</div>
+            <div style="font-weight:700;font-size:0.95rem;">
+              ${m.teamHome} <span style="color:var(--text-muted);font-size:0.85rem;">vs</span> ${m.teamAway}
+            </div>
+          </div>
+          ${rightSide}
+        </div>
+        ${oddsRow}
+        ${p2pBtn}
+      </div>`;
+  }
+
   function openBetModal(matchObj, sel) {
     let m;
     try {
@@ -301,7 +435,7 @@
     selectedOdd     = parseFloat(sel === 'HOME' ? m.oddHome : sel === 'DRAW' ? m.oddDraw : m.oddAway);
 
     const selLabels = { HOME: m.teamHome, DRAW: 'Empate (X)', AWAY: m.teamAway };
-    document.getElementById('modalLeague').textContent     = m.league;
+    document.getElementById('modalLeague').textContent     = LEAGUE_LABELS[m.league] || m.league;
     document.getElementById('modalMatchTitle').textContent = `${m.teamHome} vs ${m.teamAway}`;
     document.getElementById('modalSelection').textContent  = selLabels[sel];
     document.getElementById('modalOdd').textContent        = selectedOdd.toFixed(2) + 'x';
@@ -351,14 +485,12 @@
       currentBalance = data.newBalance;
       document.getElementById('balanceDisplay').textContent = currentBalance.toFixed(2) + ' BC';
 
-      // Recarga historial
       const h = await VB.sports.history(1);
       renderBetHistory(h.bets.slice(0, 6));
       const pending  = h.bets.filter(b => b.status === 'PENDING');
       const potential = pending.reduce((s, b) => s + parseFloat(b.potentialWin), 0);
       document.getElementById('pendingBets').textContent    = pending.length;
       document.getElementById('potentialTotal').textContent = potential.toFixed(2) + ' BC';
-
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
