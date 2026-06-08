@@ -11,6 +11,7 @@ const {
   unbanUser,
   createMatch,
   resolveMatch,
+  deleteMatch,
   importSports,
   getStats,
   getAdminLogs,
@@ -43,6 +44,9 @@ router.post('/matches/resolve',   [
   body('matchId').notEmpty(),
   body('result').isIn(['HOME', 'DRAW', 'AWAY']),
 ], resolveMatch);
+
+// Eliminar partido (UPCOMING o FINISHED, sin apuestas activas)
+router.delete('/matches/:id',     deleteMatch);
 
 // Importar partidos desde TheSportsDB
 router.post('/sports/import',     importSports);

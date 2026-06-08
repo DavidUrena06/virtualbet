@@ -93,6 +93,92 @@ const resolveMatch = async (req, res) => {
   }
 };
 
+// ══ ELIMINAR PARTIDO ════════════════════════════════════════════════════
+// Permitido sólo si:
+//   - status ∈ {UPCOMING, FINISHED}  (LIVE y CANCELLED bloqueados)
+//   - no hay SportBets con status PENDING
+//   - no hay PrivateBets activos (OPEN o LOCKED)
+//
+// Si el partido está FINISHED, las SportBets ya están en WON/LOST/REFUNDED
+// (pagadas) y los PrivateBets en RESOLVED — se borran en cascada manual.
+// Los Transactions del ledger NO se tocan: quedan como histórico del usuario.
+const deleteMatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const match = await prisma.match.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { sportBets: true, privateBets: true } },
+      },
+    });
+    if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
+
+    if (match.status === 'LIVE') {
+      return res.status(400).json({ error: 'No se puede eliminar un partido en vivo' });
+    }
+    if (match.status === 'CANCELLED') {
+      return res.status(400).json({ error: 'Partido cancelado, no se puede eliminar' });
+    }
+    if (!['UPCOMING', 'FINISHED'].includes(match.status)) {
+      return res.status(400).json({ error: 'Solo se puede eliminar UPCOMING o FINISHED' });
+    }
+
+    // Bloqueo por apuestas activas
+    const activeSport = await prisma.sportBet.count({
+      where: { matchId: id, status: 'PENDING' },
+    });
+    if (activeSport > 0) {
+      return res.status(400).json({
+        error: `No se puede eliminar un partido con apuestas activas (${activeSport} pendientes)`,
+      });
+    }
+    const activeP2P = await prisma.privateBet.count({
+      where: { matchId: id, status: { in: ['OPEN', 'LOCKED'] } },
+    });
+    if (activeP2P > 0) {
+      return res.status(400).json({
+        error: `No se puede eliminar: hay ${activeP2P} apuesta(s) P2P activas en este partido`,
+      });
+    }
+
+    // Borrado en cascada manual (el schema no tiene onDelete: Cascade para estas FK)
+    await prisma.$transaction(async (tx) => {
+      const pbets = await tx.privateBet.findMany({
+        where: { matchId: id },
+        select: { id: true },
+      });
+      for (const pb of pbets) {
+        await tx.privateBetParticipant.deleteMany({ where: { privateBetId: pb.id } });
+        // P2PInvitation tiene onDelete: Cascade desde PrivateBet
+      }
+      await tx.privateBet.deleteMany({ where: { matchId: id } });
+      await tx.sportBet.deleteMany({ where: { matchId: id } });
+      await tx.match.delete({ where: { id } });
+    });
+
+    await logAdminAction(req.user.id, 'DELETE_MATCH', null, {
+      matchId:    id,
+      match:      `${match.teamHome} vs ${match.teamAway}`,
+      league:     match.league,
+      wasStatus:  match.status,
+      sportBetsRemoved:  match._count.sportBets,
+      privateBetsRemoved: match._count.privateBets,
+    }, req);
+
+    res.json({
+      message: `Eliminado: ${match.teamHome} vs ${match.teamAway}`,
+      removed: {
+        sportBets:   match._count.sportBets,
+        privateBets: match._count.privateBets,
+      },
+    });
+  } catch (err) {
+    console.error('[ADMIN] deleteMatch:', err.message);
+    res.status(500).json({ error: 'Error al eliminar partido' });
+  }
+};
+
 // ══ IMPORTAR PARTIDOS (manual desde admin) ═══════════════════════════════
 const importSports = async (req, res) => {
   try {
@@ -247,6 +333,6 @@ const getAdminLogs = async (req, res) => {
 
 module.exports = {
   getAllUsers, giveBetCoins, giveBetCoinsAll, removeBetCoins,
-  banUser, unbanUser, createMatch, resolveMatch, importSports,
+  banUser, unbanUser, createMatch, resolveMatch, deleteMatch, importSports,
   getStats, getAdminLogs,
 };

@@ -142,6 +142,7 @@ model Match {
   id          String       @id @default(uuid())
   externalId  String?      @unique @map("external_id")
   league      String
+  leagueName  String?      @map("league_name")
   teamHome    String       @map("team_home")
   teamAway    String       @map("team_away")
   oddHome     Decimal      @map("odd_home") @db.Decimal(6, 2)

@@ -8,13 +8,25 @@ const prisma = new PrismaClient();
 
 const API_BASE = process.env.SPORTS_API_BASE || 'https://www.thesportsdb.com/api/v1/json/3';
 
-// Ligas que importamos. El nombre va al campo Match.league (uppercase para filtros).
+// Ligas que importamos. `name` va al campo Match.league (uppercase slug para filtros);
+// `display` se guarda en Match.leagueName para mostrar al usuario.
+// Verificado contra TheSportsDB lookupleague.php en 2026-06.
+//
+// Notas sobre IDs que no funcionaron:
+//   4371 → era Formula E, no Liga FPD (correcto: 4815)
+//   4683 → era Danish 1st Div, no CONCACAF Champions Cup
+//   4387 → era NBA, no CONCACAF Gold Cup
+//   4386 → no existe en TheSportsDB
+//   CONCACAF y Copa América no se encontraron disponibles en el free tier.
+//   Si TheSportsDB los agrega, alcanzá con sumar la entrada acá.
 const LEAGUES = [
-  { id: '4328', name: 'PREMIER_LEAGUE' },
-  { id: '4335', name: 'LA_LIGA' },
-  { id: '4332', name: 'SERIE_A' },
-  { id: '4480', name: 'CHAMPIONS_LEAGUE' },
-  { id: '4346', name: 'MLS' },
+  { id: '4328', name: 'PREMIER_LEAGUE',   display: 'Premier League' },
+  { id: '4335', name: 'LA_LIGA',          display: 'La Liga' },
+  { id: '4332', name: 'SERIE_A',          display: 'Serie A' },
+  { id: '4480', name: 'CHAMPIONS_LEAGUE', display: 'UEFA Champions League' },
+  { id: '4346', name: 'MLS',              display: 'MLS' },
+  { id: '4815', name: 'COSTA_RICA_FPD',   display: 'Costa Rica · Liga FPD' },
+  { id: '4429', name: 'FIFA_WORLD_CUP',   display: 'FIFA World Cup' },
 ];
 
 // Odds por defecto para partidos importados (no tenemos feed de odds real)
@@ -83,6 +95,7 @@ async function importMatchesToDB() {
             data: {
               externalId: m.externalId,
               league:     league.name,
+              leagueName: league.display,
               teamHome:   m.teamHome.trim(),
               teamAway:   m.teamAway.trim(),
               oddHome:    DEFAULT_ODDS.home,

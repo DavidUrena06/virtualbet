@@ -147,6 +147,7 @@ const VB = {
     unbanUser:       (d)         => api.post('/admin/unban',           d),
     createMatch:     (d)         => api.post('/admin/matches',         d),
     resolveMatch:    (d)         => api.post('/admin/matches/resolve', d),
+    deleteMatch:     (id)        => api.delete(`/admin/matches/${id}`),
     importSports:    ()          => api.post('/admin/sports/import',   {}),
   },
 };
