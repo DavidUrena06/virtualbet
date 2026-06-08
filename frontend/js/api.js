@@ -82,6 +82,11 @@ const VB = {
     minesReveal:  (d) => api.post('/games/mines/reveal',  d),
     minesCashout: (d) => api.post('/games/mines/cashout', d),
     plinko:       (d) => api.post('/games/plinko',        d),
+    blackjackDeal:   (d) => api.post('/games/blackjack/deal',   d),
+    blackjackHit:    (d) => api.post('/games/blackjack/hit',    d),
+    blackjackStand:  (d) => api.post('/games/blackjack/stand',  d),
+    blackjackDouble: (d) => api.post('/games/blackjack/double', d),
+    kenoPlay:        (d) => api.post('/games/keno/play',        d),
     history:      (page=1, type='') =>
       api.get(`/games/history?page=${page}${type ? '&gameType=' + type : ''}`),
   },
@@ -142,6 +147,7 @@ const VB = {
     unbanUser:       (d)         => api.post('/admin/unban',           d),
     createMatch:     (d)         => api.post('/admin/matches',         d),
     resolveMatch:    (d)         => api.post('/admin/matches/resolve', d),
+    importSports:    ()          => api.post('/admin/sports/import',   {}),
   },
 };
 

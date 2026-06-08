@@ -181,7 +181,12 @@
     <div class="section" id="section-matches">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
         <h1 style="font-size:1.35rem;font-weight:800;">Partidos</h1>
-        <button class="btn btn--orange btn--sm" onclick="openMatchModal()">+ Crear partido</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn--ghost btn--sm" id="importSportsBtn" onclick="importSports()">
+            📥 Importar partidos ahora
+          </button>
+          <button class="btn btn--orange btn--sm" onclick="openMatchModal()">+ Crear partido</button>
+        </div>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:0.9rem;flex-wrap:wrap;">
         <button class="league-tab active" onclick="setMatchFilter('UPCOMING',this)">Próximos</button>
@@ -398,6 +403,23 @@
     } catch (err) { showToast(err.message, 'error'); }
   }
 
+  // ── IMPORT SPORTS ─────────────────────────────────────────────────────
+  async function importSports() {
+    const btn = document.getElementById('importSportsBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Importando...';
+    try {
+      const data = await VB.admin.importSports();
+      showToast(data.message, 'success');
+      loadMatches(matchFilter);
+    } catch (err) {
+      showToast(err.message || 'Error al importar', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📥 Importar partidos ahora';
+    }
+  }
+
   // ── PARTIDOS ──────────────────────────────────────────────────────────
   function setMatchFilter(status, el) {
     matchFilter = status;
@@ -416,7 +438,10 @@
         return;
       }
       tbody.innerHTML = matches.map(m => `<tr>
-        <td style="font-size:0.78rem;color:var(--text-muted);">${m.league}</td>
+        <td style="font-size:0.78rem;color:var(--text-muted);">
+          ${m.league}
+          ${m.externalId ? '<div style="margin-top:3px;"><span style="font-size:0.6rem;font-weight:800;background:rgba(59,130,246,0.18);color:#3b82f6;padding:1px 6px;border-radius:99px;letter-spacing:1px;">AUTO</span></div>' : ''}
+        </td>
         <td><div style="font-weight:600;">${m.teamHome} vs ${m.teamAway}</div>
             ${m.result ? `<div style="font-size:0.72rem;color:var(--text-muted);">${m.result} · ${m.scoreHome ?? '?'}-${m.scoreAway ?? '?'}</div>` : ''}</td>
         <td style="font-size:0.82rem;">

@@ -108,23 +108,14 @@
       margin-bottom: 14px;
       position: relative; z-index: 1;
     }
-    .game-card__edge {
-      font-size: 0.65rem;
-      color: #6b7280;
-      letter-spacing: 0.5px;
-      padding: 3px 8px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 99px;
-      display: inline-block;
-      position: relative; z-index: 1;
-    }
-
     /* Color accents por juego */
-    .game-card--dice     { --accent: rgba(124,58,237,0.12); }
-    .game-card--coinflip { --accent: rgba(245,158,11,0.12); }
-    .game-card--crash    { --accent: rgba(0,230,118,0.12); }
-    .game-card--mines    { --accent: rgba(239,68,68,0.12); }
-    .game-card--plinko   { --accent: rgba(59,130,246,0.12); }
+    .game-card--dice      { --accent: rgba(124,58,237,0.12); }
+    .game-card--coinflip  { --accent: rgba(245,158,11,0.12); }
+    .game-card--crash     { --accent: rgba(0,230,118,0.12); }
+    .game-card--mines     { --accent: rgba(239,68,68,0.12); }
+    .game-card--plinko    { --accent: rgba(59,130,246,0.12); }
+    .game-card--blackjack { --accent: rgba(0,230,118,0.14); }
+    .game-card--keno      { --accent: rgba(255,176,32,0.14); }
 
     /* ── Match preview cards ─────────────────────────────────────── */
     .match-preview {
@@ -216,35 +207,42 @@
       <span class="game-card__icon">🎲</span>
       <div class="game-card__name">Dice</div>
       <div class="game-card__desc">Predecí el dado</div>
-      <span class="game-card__edge">House edge 3%</span>
     </a>
 
     <a class="game-card game-card--coinflip" href="./coinflip.html">
       <span class="game-card__icon">🪙</span>
       <div class="game-card__name">Coinflip</div>
       <div class="game-card__desc">Cara o cruz</div>
-      <span class="game-card__edge">House edge 2%</span>
     </a>
 
     <a class="game-card game-card--crash" href="./crash.html">
       <span class="game-card__icon">📈</span>
       <div class="game-card__name">Crash</div>
       <div class="game-card__desc">Retirá a tiempo</div>
-      <span class="game-card__edge">House edge 1%</span>
     </a>
 
     <a class="game-card game-card--mines" href="./mines.html">
       <span class="game-card__icon">💣</span>
       <div class="game-card__name">Mines</div>
       <div class="game-card__desc">Evitá las minas</div>
-      <span class="game-card__edge">House edge 3%</span>
     </a>
 
     <a class="game-card game-card--plinko" href="./plinko.html">
       <span class="game-card__icon">🔵</span>
       <div class="game-card__name">Plinko</div>
       <div class="game-card__desc">La bolita cae</div>
-      <span class="game-card__edge">House edge variable</span>
+    </a>
+
+    <a class="game-card game-card--blackjack" href="./blackjack.html">
+      <span class="game-card__icon">🃏</span>
+      <div class="game-card__name">Blackjack</div>
+      <div class="game-card__desc">Vencé a la casa</div>
+    </a>
+
+    <a class="game-card game-card--keno" href="./keno.html">
+      <span class="game-card__icon">🎯</span>
+      <div class="game-card__name">Keno</div>
+      <div class="game-card__desc">Elegí tus números</div>
     </a>
   </div>
 
