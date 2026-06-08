@@ -430,7 +430,16 @@
     document.getElementById('playZone').style.display = active ? 'grid' : 'none';
     document.getElementById('betSection').style.opacity = active ? '0.4' : '1';
     document.getElementById('betSection').style.pointerEvents = active ? 'none' : 'auto';
-    if (!active) {
+
+    // Reset estado de botones Hit/Stand/Double al entrar a una mano nueva.
+    // Sin esto: si la mano previa terminó por stand() o double() exitosos
+    // los disabled=true quedaron seteados y la próxima mano no permite clicks.
+    if (active) {
+      document.getElementById('hitBtn').disabled    = false;
+      document.getElementById('standBtn').disabled  = false;
+      // Double respeta canDouble + saldo suficiente para igualar el bet
+      document.getElementById('doubleBtn').disabled = !canDouble || currentBalance < lastBet;
+    } else {
       document.getElementById('dealBtn').disabled = false;
       document.getElementById('dealBtn').textContent = '🃏 Repartir';
     }
