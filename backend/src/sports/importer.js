@@ -27,6 +27,9 @@ const LEAGUES = [
   { id: '4346', name: 'MLS',              display: 'MLS' },
   { id: '4815', name: 'COSTA_RICA_FPD',   display: 'Costa Rica · Liga FPD' },
   { id: '4429', name: 'FIFA_WORLD_CUP',   display: 'FIFA World Cup' },
+  // Sin ID válido en free tier de TheSportsDB — crear partidos manualmente desde admin
+  // { id: 'XXXX', name: 'CONCACAF_CHAMPIONS_CUP', display: 'CONCACAF Champions Cup' },
+  // { id: 'XXXX', name: 'COPA_AMERICA',            display: 'Copa América' },
 ];
 
 // Odds por defecto para partidos importados (no tenemos feed de odds real)
