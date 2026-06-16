@@ -159,6 +159,21 @@ const VB = {
     leaderboard: (period='week', mundial=false) =>
       api.get(`/promo/leaderboard?period=${period}&mundial=${mundial}`),
   },
+
+  // Chat de partidos — ruta: /api/chat/*
+  chat: {
+    messages: (matchId, after) =>
+      api.get(`/chat/${matchId}${after ? '?after=' + encodeURIComponent(after) : ''}`),
+    send:     (matchId, message) => api.post(`/chat/${matchId}`, { message }),
+  },
+
+  // Push notifications — ruta: /api/push/*
+  push: {
+    publicKey:    ()  => api.get('/push/public-key'),
+    subscribe:    (d) => api.post('/push/subscribe',   d),
+    unsubscribe:  (d) => api.post('/push/unsubscribe', d),
+    test:         ()  => api.post('/push/test', {}),
+  },
 };
 
 // ── Guards de rutas ───────────────────────────────────────────────────────

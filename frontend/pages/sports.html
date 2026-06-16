@@ -87,6 +87,77 @@
     }
     .daily-bonus__amount { font-size: 1.4rem; font-weight: 900; color: var(--gold); }
 
+    /* Push opt-in */
+    .push-banner {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: var(--radius-md);
+      padding: 10px 14px; margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.85rem;
+    }
+    .push-banner__close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+
+    /* Chat modal */
+    .chat-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8); z-index: 600;
+      align-items: flex-end; justify-content: center; padding: 0;
+    }
+    .chat-modal.open { display: flex; }
+    .chat-modal__panel {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      width: 100%; max-width: 560px; height: 80vh; max-height: 700px;
+      display: flex; flex-direction: column;
+    }
+    @media(min-width:640px) {
+      .chat-modal { align-items: center; padding: 1rem; }
+      .chat-modal__panel { border-radius: var(--radius-xl); height: 70vh; }
+    }
+    .chat-modal__header {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chat-modal__messages {
+      flex: 1; overflow-y: auto; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .chat-msg { display: flex; gap: 8px; align-items: flex-start; }
+    .chat-msg__avatar { font-size: 1.4rem; flex-shrink: 0; }
+    .chat-msg__body { flex: 1; min-width: 0; }
+    .chat-msg__name {
+      font-size: 0.72rem; color: var(--text-muted); font-weight: 700;
+    }
+    .chat-msg__name.admin { color: #fbbf24; }
+    .chat-msg__text {
+      font-size: 0.9rem; color: var(--text-primary);
+      word-wrap: break-word;
+      background: var(--bg-secondary);
+      padding: 6px 10px; border-radius: 12px; margin-top: 2px;
+      display: inline-block; max-width: 100%;
+    }
+    .chat-msg__time { font-size: 0.65rem; color: var(--text-muted); margin-left: 6px; }
+    .chat-modal__input {
+      padding: 12px 14px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px;
+    }
+    .chat-modal__input input { flex: 1; }
+
+    .chat-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 99px;
+      background: rgba(59, 130, 246, 0.15); color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+    }
+    .share-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 9px; font-size: 0.72rem;
+      color: var(--text-secondary); cursor: pointer;
+    }
+    .share-btn:hover { background: var(--bg-card); border-color: var(--gold); color: var(--gold); }
+
     .badge {
       display: inline-flex; align-items: center; gap: 4px;
       padding: 2px 8px; border-radius: 99px;
@@ -172,6 +243,9 @@
 
   <!-- Daily bonus (solo visible si puede reclamar) -->
   <div id="dailyBonusCard" style="display:none;"></div>
+
+  <!-- Push opt-in banner (solo si Notification.permission === 'default') -->
+  <div id="pushBanner" style="display:none;"></div>
 
   <!-- Stats rápidos -->
   <div class="stats-grid" style="margin-bottom:1.25rem;">
@@ -298,7 +372,30 @@
   </div>
 </div>
 
+<!-- Chat modal -->
+<div class="chat-modal" id="chatModal" onclick="maybeCloseChat(event)">
+  <div class="chat-modal__panel">
+    <div class="chat-modal__header">
+      <div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Chat en vivo</div>
+        <div style="font-weight:700;" id="chatTitle">—</div>
+      </div>
+      <button onclick="closeChat()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;">✕</button>
+    </div>
+    <div class="chat-modal__messages" id="chatMessages">
+      <div style="text-align:center;color:var(--text-muted);padding:1rem;">Cargando...</div>
+    </div>
+    <div class="chat-modal__input">
+      <input class="form-input" id="chatInput" type="text" maxlength="280" placeholder="Escribí algo... (máx 280)"
+             onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn btn--orange" id="chatSendBtn" onclick="sendChatMessage()">▶</button>
+    </div>
+  </div>
+</div>
+
 <script src="../js/api.js"></script>
+<script src="../js/share.js"></script>
+<script src="../js/push.js"></script>
 <script src="../js/navbar.js"></script>
 <script>
   requireLogin();
@@ -352,6 +449,7 @@
     loadMatches();
     loadDailyBonus();
     loadLeaderboard(false);
+    renderPushBanner();
 
     // Auto-refresh: cada 30s recarga matches si no hay modal abierto
     setInterval(() => {
@@ -618,6 +716,14 @@
         </button>
       </div>` : '';
 
+    // Botón chat para LIVE/UPCOMING
+    const chatBtn = (isLive || isUpcoming || isFinished) ? `
+      <div style="margin-top:6px;text-align:right;">
+        <button class="chat-btn" onclick="openChat('${m.id}', '${encodeURIComponent(m.teamHome)} vs ${encodeURIComponent(m.teamAway)}')">
+          💬 Chat ${isLive ? 'en vivo' : ''}
+        </button>
+      </div>` : '';
+
     return `
       <div class="match-card ${isLive ? 'live' : ''} ${isFinished ? 'finished' : ''} ${featured ? 'featured' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -631,6 +737,7 @@
         </div>
         ${oddsRow}
         ${p2pBtn}
+        ${chatBtn}
       </div>`;
   }
 
@@ -718,7 +825,10 @@
     const selLabel = { HOME:'Local', DRAW:'Empate', AWAY:'Visita' };
     const statusColor = { PENDING:'var(--gold)', WON:'var(--green-neon)', LOST:'var(--red-accent)', REFUNDED:'var(--text-muted)' };
 
-    el.innerHTML = bets.map(b => `
+    // Guarda bets en variable global accesible para sharing
+    window._betsForShare = bets;
+
+    el.innerHTML = bets.map((b, i) => `
       <div style="display:flex;align-items:center;justify-content:space-between;
                   padding:10px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;">
         <div style="min-width:0;flex:1;">
@@ -729,16 +839,173 @@
             ${selLabel[b.selection]} · ${parseFloat(b.amount).toFixed(2)} BC · cuota ${parseFloat(b.oddAtBet).toFixed(2)}x
           </div>
         </div>
-        <div style="text-align:right;flex-shrink:0;">
+        <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
           <div style="font-size:0.82rem;font-weight:700;color:${statusColor[b.status]};">
             ${{ PENDING:'⏳ Pendiente', WON:'✓ Ganada', LOST:'✗ Perdida', REFUNDED:'↩ Reembolso' }[b.status]}
           </div>
           <div style="font-size:0.75rem;color:${b.status === 'WON' ? 'var(--green-neon)' : 'var(--text-muted)'};">
             ${b.status === 'WON' ? '+' + parseFloat(b.potentialWin).toFixed(2) + ' BC' : parseFloat(b.potentialWin).toFixed(2) + ' BC pot.'}
           </div>
+          <button class="share-btn" onclick="shareBetIdx(${i})">📤 Compartir</button>
         </div>
       </div>
     `).join('');
+  }
+
+  // ── Share bet ───────────────────────────────────────────────────────────
+  async function shareBetIdx(idx) {
+    const b = window._betsForShare?.[idx];
+    if (!b) return;
+    try {
+      await ShareBet.shareBet({
+        teamHome:     b.match?.teamHome,
+        teamAway:     b.match?.teamAway,
+        selection:    b.selection,
+        amount:       b.amount,
+        oddAtBet:     b.oddAtBet,
+        potentialWin: b.potentialWin,
+        status:       b.status,
+      });
+    } catch (err) {
+      showToast('No se pudo compartir: ' + err.message, 'error');
+    }
+  }
+
+  // ── Push opt-in banner ──────────────────────────────────────────────────
+  function renderPushBanner() {
+    const el     = document.getElementById('pushBanner');
+    const status = PushClient.status();
+    const dismissed = localStorage.getItem('vb_push_dismissed');
+
+    if (status !== 'default' || dismissed === '1') {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div class="push-banner">
+        <span style="font-size:1.2rem;">🔔</span>
+        <div style="flex:1;">
+          <strong>Activá notificaciones</strong> y enterate cuando ganás tus apuestas o empieza un partido tuyo.
+        </div>
+        <button class="btn btn--primary btn--sm" onclick="enablePush()">Activar</button>
+        <button class="push-banner__close" onclick="dismissPushBanner()" title="Ocultar">✕</button>
+      </div>`;
+  }
+  async function enablePush() {
+    try {
+      await PushClient.enable();
+      await PushClient.test();
+      showToast('✅ Notificaciones activadas', 'success');
+      renderPushBanner();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+  function dismissPushBanner() {
+    localStorage.setItem('vb_push_dismissed', '1');
+    renderPushBanner();
+  }
+
+  // ── Chat de partido ─────────────────────────────────────────────────────
+  let chatPollIntv = null;
+  let chatMatchId  = null;
+  let chatLastTs   = null;
+
+  function openChat(matchId, titleEncoded) {
+    chatMatchId = matchId;
+    chatLastTs  = null;
+    document.getElementById('chatTitle').textContent = decodeURIComponent(titleEncoded);
+    document.getElementById('chatMessages').innerHTML =
+      '<div style="text-align:center;color:var(--text-muted);padding:1rem;">Cargando...</div>';
+    document.getElementById('chatInput').value = '';
+    document.getElementById('chatModal').classList.add('open');
+
+    loadChatInitial();
+    chatPollIntv = setInterval(pollChat, 5000);
+  }
+
+  function closeChat() {
+    document.getElementById('chatModal').classList.remove('open');
+    if (chatPollIntv) { clearInterval(chatPollIntv); chatPollIntv = null; }
+    chatMatchId = null;
+  }
+
+  function maybeCloseChat(e) {
+    if (e.target === document.getElementById('chatModal')) closeChat();
+  }
+
+  async function loadChatInitial() {
+    try {
+      const data = await VB.chat.messages(chatMatchId);
+      chatLastTs = data.serverTime;
+      const el = document.getElementById('chatMessages');
+      if (data.messages.length === 0) {
+        el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;">Sé el primero en escribir 💬</div>';
+      } else {
+        el.innerHTML = data.messages.map(msgHTML).join('');
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (err) {
+      document.getElementById('chatMessages').innerHTML =
+        `<div style="text-align:center;color:var(--text-muted);padding:1rem;">${err.message}</div>`;
+    }
+  }
+
+  async function pollChat() {
+    if (!chatMatchId) return;
+    try {
+      const data = await VB.chat.messages(chatMatchId, chatLastTs);
+      chatLastTs = data.serverTime;
+      if (data.messages.length === 0) return;
+      const el = document.getElementById('chatMessages');
+      const empty = el.querySelector('div[style*="Sé el primero"]');
+      if (empty) el.innerHTML = '';
+      const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      el.insertAdjacentHTML('beforeend', data.messages.map(msgHTML).join(''));
+      if (wasAtBottom) el.scrollTop = el.scrollHeight;
+    } catch (err) { /* silencioso para polling */ }
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function msgHTML(m) {
+    const time = new Date(m.createdAt).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="chat-msg">
+        <div class="chat-msg__avatar">${escapeHTML(m.avatar || '🎰')}</div>
+        <div class="chat-msg__body">
+          <div>
+            <span class="chat-msg__name ${m.isAdmin ? 'admin' : ''}">
+              ${escapeHTML(m.username)}${m.isAdmin ? ' 👑' : ''}
+            </span>
+            <span class="chat-msg__time">${time}</span>
+          </div>
+          <div class="chat-msg__text">${escapeHTML(m.message)}</div>
+        </div>
+      </div>`;
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text  = input.value.trim();
+    if (!text || !chatMatchId) return;
+    const btn = document.getElementById('chatSendBtn');
+    btn.disabled = true;
+    try {
+      await VB.chat.send(chatMatchId, text);
+      input.value = '';
+      pollChat(); // recarga inmediatamente
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
   }
 
   init();

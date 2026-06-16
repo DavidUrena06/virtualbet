@@ -43,6 +43,9 @@ model User {
   // Invitaciones P2P enviadas y recibidas
   p2pInvitationsSent       P2PInvitation[]           @relation("InvitationInviter")
   p2pInvitationsReceived   P2PInvitation[]           @relation("InvitationInvitee")
+  // Chat de partidos + push subscriptions
+  matchMessages            MatchMessage[]
+  pushSubscriptions        PushSubscription[]
 
   @@map("users")
 }
@@ -158,6 +161,7 @@ model Match {
 
   sportBets   SportBet[]
   privateBets PrivateBet[]
+  messages    MatchMessage[]
 
   @@map("matches")
 }
@@ -405,4 +409,41 @@ model CoinSchedule {
 enum TargetType {
   ALL_USERS
   SPECIFIC_USER
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHAT DE PARTIDOS (mensajes de usuarios en partidos LIVE)
+// ══════════════════════════════════════════════════════════════
+
+model MatchMessage {
+  id        String   @id @default(uuid())
+  matchId   String   @map("match_id")
+  userId    String   @map("user_id")
+  message   String   @db.VarChar(280)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([matchId, createdAt])
+  @@map("match_messages")
+}
+
+// ══════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS (Web Push API)
+// ══════════════════════════════════════════════════════════════
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
