@@ -149,6 +149,15 @@ const VB = {
     resolveMatch:    (d)         => api.post('/admin/matches/resolve', d),
     deleteMatch:     (id)        => api.delete(`/admin/matches/${id}`),
     importSports:    ()          => api.post('/admin/sports/import',   {}),
+    syncSportsNow:   ()          => api.post('/admin/sports/sync-now', {}),
+  },
+
+  // Promociones — ruta: /api/promo/*
+  promo: {
+    dailyStatus: ()          => api.get('/promo/daily'),
+    dailyClaim:  ()          => api.post('/promo/daily/claim', {}),
+    leaderboard: (period='week', mundial=false) =>
+      api.get(`/promo/leaderboard?period=${period}&mundial=${mundial}`),
   },
 };
 
