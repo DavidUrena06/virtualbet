@@ -140,7 +140,7 @@ const ShareBet = (() => {
     });
 
     // Footer
-    drawCenteredText(ctx, '🌐 virtualbet.vercel.app', W / 2, 1020, {
+    drawCenteredText(ctx, '🌐 virtualbet-vert.vercel.app', W / 2, 1020, {
       font: '32px sans-serif', color: 'rgba(255,255,255,0.55)',
     });
 
@@ -153,7 +153,7 @@ const ShareBet = (() => {
     const intro = status === 'WON'
       ? `🎉 ¡Acabo de ganar ${parseFloat(bet.potentialWin).toFixed(2)} BC en VirtualBet!`
       : `⚽ Mi apuesta en VirtualBet:`;
-    return `${intro}\n\n${bet.teamHome} vs ${bet.teamAway}\nSelección: ${selMap[bet.selection]}\nCuota: ${parseFloat(bet.oddAtBet).toFixed(2)}x\n\n¿Querés jugar conmigo? 🎰\nhttps://virtualbet.vercel.app`;
+    return `${intro}\n\n${bet.teamHome} vs ${bet.teamAway}\nSelección: ${selMap[bet.selection]}\nCuota: ${parseFloat(bet.oddAtBet).toFixed(2)}x\n\n¿Querés jugar conmigo? 🎰\nhttps://virtualbet-vert.vercel.app`;
   }
 
   // Punto de entrada — usa Web Share API con archivos si está disponible,
