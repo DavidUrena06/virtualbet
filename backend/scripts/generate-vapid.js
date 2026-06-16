@@ -16,5 +16,5 @@ console.log(`VAPID_PUBLIC_KEY="${keys.publicKey}"`);
 console.log(`VAPID_PRIVATE_KEY="${keys.privateKey}"`);
 console.log(`VAPID_SUBJECT="mailto:TU-EMAIL@gmail.com"  # ← cambiá esto por tu email real o usá una URL`);
 console.log('\n💡 VAPID_SUBJECT no recibe emails — es contacto solo si abusás del sistema.');
-console.log('   Alternativa: VAPID_SUBJECT="https://virtualbet.vercel.app"\n');
+console.log('   Alternativa: VAPID_SUBJECT="https://virtualbet-vert.vercel.app"\n');
 console.log('⚠️  NO commitees estas keys. Guardalas en Render → Environment.\n');
