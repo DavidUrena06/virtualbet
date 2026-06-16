@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
+const { sendPushToUser } = require('../push/push.controller');
 const prisma = new PrismaClient();
 
 /**
@@ -33,6 +34,7 @@ async function resolveMatch(matchId, result, opts = {}) {
   if (match.status === 'CANCELLED') throw new Error('Partido cancelado');
 
   let paidSportBets = 0;
+  const winners = []; // { userId, payout, matchTitle } — push tras commit
 
   await prisma.$transaction(async (tx) => {
     await tx.match.update({
@@ -83,10 +85,25 @@ async function resolveMatch(matchId, result, opts = {}) {
             data:    { betId: bet.id, payout },
           },
         }).catch(() => {});
+        winners.push({
+          userId: bet.userId,
+          payout,
+          matchTitle: `${match.teamHome} vs ${match.teamAway}`,
+        });
         paidSportBets++;
       }
     }
   });
+
+  // Push notifications a ganadores (post-commit, no bloquea la respuesta)
+  for (const w of winners) {
+    sendPushToUser(w.userId, {
+      title: '🎉 ¡Ganaste!',
+      body:  `+${w.payout.toFixed(2)} BC en ${w.matchTitle}`,
+      url:   '/pages/sports.html',
+      tag:   `sport-win-${w.userId}`,
+    }).catch(err => console.error('[RESOLVER] push:', err.message));
+  }
 
   // Resuelve apuestas P2P asociadas al partido
   const p2pToResolve = await prisma.privateBet.findMany({

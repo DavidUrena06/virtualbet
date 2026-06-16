@@ -8,13 +8,39 @@ const helmet    = require('helmet');
 const cors      = require('cors');
 const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
+const { validateStartup } = require('./security/startup');
+const {
+  authStrictLimiter, betLimiter, chatLimiter, pushLimiter,
+  promoLimiter, p2pLimiter, gameLimiter, adminLimiter,
+} = require('./security/rateLimiters');
+
+// Falla rápido si la config de seguridad está mal en producción
+validateStartup();
 
 const app    = express();
 const prisma = new PrismaClient();
 const PORT   = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
-app.use(helmet());
+
+// Helmet con CSP estricta. La API solo devuelve JSON — no necesita relajar nada.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:    ["'none'"],
+      baseUri:       ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'same-site' },
+  crossOriginOpenerPolicy:   { policy: 'same-origin' },
+  referrerPolicy:            { policy: 'no-referrer' },
+  hsts: { maxAge: 63072000, includeSubDomains: true, preload: true }, // 2 años
+  noSniff: true,
+  xssFilter: true,
+  hidePoweredBy: true,
+  frameguard: { action: 'deny' },
+}));
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
@@ -71,6 +97,8 @@ const p2pRoutes      = require('./p2p/p2p.routes');
 const adminRoutes    = require('./admin/admin.routes');
 const userRoutes     = require('./routes/user.routes');
 const promoRoutes    = require('./promo/promo.routes');
+const chatRoutes     = require('./chat/chat.routes');
+const pushRoutes     = require('./push/push.routes');
 
 // Notifications inline para no crear archivo extra
 const { PrismaClient: PC2 } = require('@prisma/client');
@@ -98,25 +126,42 @@ notifRouter.post('/read-all', async (req, res) => {
   } catch { res.status(500).json({ error: 'Error' }); }
 });
 
-app.use('/api/auth',          authLimiter, authRoutes);
+app.use('/api/auth',          authLimiter, authStrictLimiter, authRoutes);
 app.use('/api/wallet',        walletRoutes);
-app.use('/api/games',         gamesRoutes);
+app.use('/api/games',         gameLimiter,  gamesRoutes);
 app.use('/api/friends',       friendsRoutes);
-app.use('/api/sports',        sportRoutes);
-app.use('/api/p2p',           p2pRoutes);
-app.use('/api/admin',         adminRoutes);
+app.use('/api/sports',        betLimiter,   sportRoutes);
+app.use('/api/p2p',           p2pLimiter,   p2pRoutes);
+app.use('/api/admin',         adminLimiter, adminRoutes);
 app.use('/api/user',          userRoutes);
-app.use('/api/promo',         promoRoutes);
+app.use('/api/promo',         promoLimiter, promoRoutes);
+app.use('/api/chat',          chatLimiter,  chatRoutes);
+app.use('/api/push',          pushLimiter,  pushRoutes);
 app.use('/api/notifications', notifRouter);
 
 // ── Error handling ────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
 app.use((err, req, res, next) => {
-  console.error('[ERROR]', err.message);
-  if (err.message === 'CORS bloqueado') return res.status(403).json({ error: 'Origen no permitido' });
+  // Loguea internamente pero NO expone stack ni detalles en producción
+  console.error('[ERROR]', req.method, req.path, '-', err.message);
+  if (err.stack && process.env.NODE_ENV !== 'production') console.error(err.stack);
+
+  if (err.message === 'CORS bloqueado') {
+    return res.status(403).json({ error: 'Origen no permitido' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Payload demasiado grande' });
+  }
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'JSON inválido' });
+  }
+
   const status = err.statusCode || 500;
-  const msg    = process.env.NODE_ENV === 'production' ? 'Error interno' : err.message;
+  // Sólo errores 4xx pueden mostrar mensaje real; 5xx siempre genérico en prod
+  const msg = (status < 500 || process.env.NODE_ENV !== 'production')
+    ? (err.message || 'Error')
+    : 'Error interno del servidor';
   res.status(status).json({ error: msg });
 });
 

@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "uuid": "^10.0.0",
+    "web-push": "^3.6.7",
     "winston": "^3.15.0",
     "xss": "^1.0.15"
   },

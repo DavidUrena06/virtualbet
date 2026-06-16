@@ -10,6 +10,7 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
 const { importMatchesToDB, updateLiveScores, cleanupOldMatches, recomputeUpcomingOdds } = require('../sports/importer');
+const { sendPushToUser } = require('../push/push.controller');
 const prisma = new PrismaClient();
 
 // ══════════════════════════════════════════════════════════════
@@ -169,6 +170,52 @@ cron.schedule('30 */6 * * *', async () => {
     await recomputeUpcomingOdds();
   } catch (err) {
     console.error('[CRON] recomputeUpcomingOdds:', err.message);
+  }
+});
+
+// ── Recordatorios de partidos por iniciar ─────────────────────────────────
+// Cada 5 min busca partidos UPCOMING que empiezan en 13-18 min y notifica a
+// los usuarios que ya apostaron. Ventana de 5 min para garantizar entrega
+// aunque el cron se atrase un poco; usamos un cache en memoria para dedupe.
+const remindedMatches = new Set();
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const now      = new Date();
+    const inMin13  = new Date(now.getTime() + 13 * 60 * 1000);
+    const inMin18  = new Date(now.getTime() + 18 * 60 * 1000);
+
+    const matches = await prisma.match.findMany({
+      where: {
+        status:   'UPCOMING',
+        startsAt: { gte: inMin13, lte: inMin18 },
+      },
+      include: {
+        sportBets: { where: { status: 'PENDING' }, select: { userId: true } },
+      },
+    });
+
+    for (const m of matches) {
+      if (remindedMatches.has(m.id)) continue;
+
+      const userIds = [...new Set(m.sportBets.map(b => b.userId))];
+      for (const uid of userIds) {
+        sendPushToUser(uid, {
+          title: '⚽ ¡Tu partido empieza en 15 minutos!',
+          body:  `${m.teamHome} vs ${m.teamAway} — abrí la app para seguir el live`,
+          url:   '/pages/sports.html',
+          tag:   `match-reminder-${m.id}`,
+        }).catch(err => console.error('[CRON] push reminder:', err.message));
+      }
+      remindedMatches.add(m.id);
+    }
+
+    // Cleanup del set cada vez que pasamos los 500 entries
+    if (remindedMatches.size > 500) {
+      const old = Array.from(remindedMatches).slice(0, 300);
+      old.forEach(id => remindedMatches.delete(id));
+    }
+  } catch (err) {
+    console.error('[CRON] match reminder:', err.message);
   }
 });
 

@@ -5,6 +5,8 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
+const { checkPassword } = require('../security/passwordBlacklist');
+const loginAttempts = require('../security/loginAttempts');
 const prisma = new PrismaClient();
 
 // ─── Registro de usuario ──────────────────────────────────────────────────────
@@ -16,7 +18,12 @@ const register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
+    // Mass assignment defense: destructuring explícito sin ...rest
     const { username, email, password } = req.body;
+
+    // Validación avanzada de contraseña (blacklist + contiene username/email)
+    const pwdErr = checkPassword(password, username, email);
+    if (pwdErr) return res.status(400).json({ error: pwdErr });
 
     // Verifica que no exista el usuario
     const existingUser = await prisma.user.findFirst({
@@ -106,6 +113,18 @@ const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
+    const ip = req.ip;
+
+    // Account lockout / IP lockout antes de gastar CPU en bcrypt
+    const lock = loginAttempts.check(email, ip);
+    if (lock.blocked) {
+      const min = Math.ceil(lock.retryAfterMs / 60000);
+      return res.status(429).json({
+        error: lock.reason === 'email'
+          ? `Cuenta bloqueada temporalmente. Probá en ${min} minuto${min!==1?'s':''}.`
+          : `IP bloqueada por demasiados intentos. Probá en ${min} minuto${min!==1?'s':''}.`,
+      });
+    }
 
     // Busca el usuario (respuesta genérica para no revelar si el email existe)
     const user = await prisma.user.findUnique({
@@ -119,6 +138,7 @@ const login = async (req, res) => {
       : await bcrypt.compare(password, '$2b$12$invalidhashtopreventtimingatk');
 
     if (!user || !passwordMatch) {
+      loginAttempts.recordFailure(email, ip);
       return res.status(401).json({ error: 'Email o contraseña incorrectos' });
     }
 
@@ -127,6 +147,8 @@ const login = async (req, res) => {
         error: `Cuenta suspendida. Razón: ${user.banReason || 'Violación de términos'}`,
       });
     }
+
+    loginAttempts.recordSuccess(email, ip);
 
     // Genera JWT
     const token = jwt.sign(
