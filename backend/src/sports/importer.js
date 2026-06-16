@@ -1,24 +1,26 @@
 // sports/importer.js
-// Importa partidos de TheSportsDB (gratis, sin API key) y mantiene los scores
-// en vivo sincronizados. Cuando un partido termina, resuelve apuestas automáticamente.
+// Importa partidos y mantiene scores en vivo + auto-resolución de apuestas.
+//
+// FUENTES DE DATOS:
+//   - Listado de próximos partidos: TheSportsDB eventsnextleague.php (free tier)
+//   - Scores en vivo: ESPN scoreboard (free, sin key, ~30s refresh) — PRIMARIO
+//   - Fallback de scores: TheSportsDB lookupevent.php (free tier)
+//   - Cuotas: calculadas dinámicamente por forma reciente (oddsCalculator.js)
+//
+// AUTO-RESOLUCIÓN DE PARTIDOS:
+//   Paso 1 — ESPN scoreboard por liga (actualiza marcadores y resuelve si state=post)
+//   Paso 2 — lookupevent.php por partido (solo si ESPN no devolvió match)
+//   Paso 3 — Fallback por tiempo: >150 min en LIVE/UPCOMING → resolver con marcador actual
 
 const { PrismaClient } = require('@prisma/client');
 const { resolveMatch } = require('./resolver');
+const { fetchLeagueScoreboard, findMatchingEvent, ESPN_LEAGUE_SLUGS } = require('./espn');
+const { computeMatchOdds, DEFAULT_ODDS } = require('./oddsCalculator');
 const prisma = new PrismaClient();
 
 const API_BASE = process.env.SPORTS_API_BASE || 'https://www.thesportsdb.com/api/v1/json/3';
+const MATCH_MAX_DURATION_MS = 150 * 60 * 1000; // 150 min = 90 juego + 60 buffer
 
-// Ligas que importamos. `name` va al campo Match.league (uppercase slug para filtros);
-// `display` se guarda en Match.leagueName para mostrar al usuario.
-// Verificado contra TheSportsDB lookupleague.php en 2026-06.
-//
-// Notas sobre IDs que no funcionaron:
-//   4371 → era Formula E, no Liga FPD (correcto: 4815)
-//   4683 → era Danish 1st Div, no CONCACAF Champions Cup
-//   4387 → era NBA, no CONCACAF Gold Cup
-//   4386 → no existe en TheSportsDB
-//   CONCACAF y Copa América no se encontraron disponibles en el free tier.
-//   Si TheSportsDB los agrega, alcanzá con sumar la entrada acá.
 const LEAGUES = [
   { id: '4328', name: 'PREMIER_LEAGUE',   display: 'Premier League' },
   { id: '4335', name: 'LA_LIGA',          display: 'La Liga' },
@@ -27,15 +29,10 @@ const LEAGUES = [
   { id: '4346', name: 'MLS',              display: 'MLS' },
   { id: '4815', name: 'COSTA_RICA_FPD',   display: 'Costa Rica · Liga FPD' },
   { id: '4429', name: 'FIFA_WORLD_CUP',   display: 'FIFA World Cup' },
-  // Sin ID válido en free tier de TheSportsDB — crear partidos manualmente desde admin
-  // { id: 'XXXX', name: 'CONCACAF_CHAMPIONS_CUP', display: 'CONCACAF Champions Cup' },
-  // { id: 'XXXX', name: 'COPA_AMERICA',            display: 'Copa América' },
 ];
 
-// Odds por defecto para partidos importados (no tenemos feed de odds real)
-const DEFAULT_ODDS = { home: 2.0, draw: 3.2, away: 2.0 };
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
 async function fetchJSON(url) {
   const res = await fetch(url, {
     headers: { 'User-Agent': 'VirtualBet/1.0' },
@@ -44,8 +41,9 @@ async function fetchJSON(url) {
   return res.json();
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 function parseStartsAt(event) {
-  // TheSportsDB devuelve dateEvent (YYYY-MM-DD) y strTimestamp (ISO con TZ) o strTime.
   if (event.strTimestamp) {
     const d = new Date(event.strTimestamp);
     if (!isNaN(d.getTime())) return d;
@@ -61,7 +59,38 @@ function parseStartsAt(event) {
   return null;
 }
 
-// 1. fetchUpcomingMatches(leagueId) → próximos partidos formateados
+function parseLookupEventStatus(e) {
+  const scoreHome = parseInt(e.intHomeScore ?? '', 10);
+  const scoreAway = parseInt(e.intAwayScore ?? '', 10);
+  const progress  = (e.strProgress || '').trim().toLowerCase();
+  const status    = (e.strStatus   || '').trim().toLowerCase();
+
+  const isFinished =
+    progress === 'ft' || progress.includes('finished') ||
+    status === 'ft' || status === 'match finished' || status.includes('finished') ||
+    status === 'aet' || status === 'pen';
+
+  return {
+    scoreHome: isNaN(scoreHome) ? null : scoreHome,
+    scoreAway: isNaN(scoreAway) ? null : scoreAway,
+    isFinished,
+  };
+}
+
+async function lookupEvent(externalId) {
+  try {
+    const data = await fetchJSON(`${API_BASE}/lookupevent.php?id=${externalId}`);
+    const e = data?.events?.[0];
+    if (!e) return null;
+    return parseLookupEventStatus(e);
+  } catch (err) {
+    console.error(`[IMPORTER] lookupevent ${externalId}:`, err.message);
+    return null;
+  }
+}
+
+// ─── Importación de partidos ─────────────────────────────────────────────────
+
 async function fetchUpcomingMatches(leagueId) {
   const data = await fetchJSON(`${API_BASE}/eventsnextleague.php?id=${leagueId}`);
   const events = data?.events || [];
@@ -76,9 +105,8 @@ async function fetchUpcomingMatches(leagueId) {
     .filter(m => m.startsAt && m.startsAt > new Date(Date.now() + 5 * 60 * 1000));
 }
 
-// 2. importMatchesToDB → inserta partidos nuevos por liga
 async function importMatchesToDB() {
-  const summary = { imported: 0, skipped: 0, errors: 0, perLeague: {} };
+  const summary = { imported: 0, skipped: 0, errors: 0, oddsComputed: 0, oddsDefault: 0, perLeague: {} };
 
   for (const league of LEAGUES) {
     summary.perLeague[league.name] = { imported: 0, skipped: 0 };
@@ -94,6 +122,12 @@ async function importMatchesToDB() {
             summary.perLeague[league.name].skipped++;
             continue;
           }
+
+          // Calcula odds dinámicas para este partido
+          const odds = await computeMatchOdds(m.teamHome.trim(), m.teamAway.trim());
+          if (odds.source === 'computed') summary.oddsComputed++;
+          else                            summary.oddsDefault++;
+
           await prisma.match.create({
             data: {
               externalId: m.externalId,
@@ -101,15 +135,17 @@ async function importMatchesToDB() {
               leagueName: league.display,
               teamHome:   m.teamHome.trim(),
               teamAway:   m.teamAway.trim(),
-              oddHome:    DEFAULT_ODDS.home,
-              oddDraw:    DEFAULT_ODDS.draw,
-              oddAway:    DEFAULT_ODDS.away,
+              oddHome:    odds.home,
+              oddDraw:    odds.draw,
+              oddAway:    odds.away,
               startsAt:   m.startsAt,
               status:     'UPCOMING',
             },
           });
           summary.imported++;
           summary.perLeague[league.name].imported++;
+
+          await sleep(100); // throttle suave para no martillar APIs
         } catch (err) {
           summary.errors++;
           console.error(`[IMPORTER] match ${m.externalId}:`, err.message);
@@ -121,11 +157,50 @@ async function importMatchesToDB() {
     }
   }
 
-  console.log(`[IMPORTER] Resumen: +${summary.imported} importados, ${summary.skipped} ya existían, ${summary.errors} errores`);
+  console.log(`[IMPORTER] Resumen: +${summary.imported} importados (${summary.oddsComputed} odds calculadas, ${summary.oddsDefault} default), ${summary.skipped} ya existían, ${summary.errors} errores`);
   return summary;
 }
 
-// 4. autoResolveMatch — determina ganador desde scores y resuelve apuestas
+// ─── Recálculo periódico de odds para partidos UPCOMING ──────────────────────
+// Las odds cambian con el tiempo (lesiones, forma, noticias). Recalculamos
+// cada 6h para partidos que aún no empezaron, ignorando partidos a <2h de inicio
+// para no desconcertar a usuarios que ya pusieron una apuesta.
+async function recomputeUpcomingOdds() {
+  const now = new Date();
+  const minCutoff = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2h de antelación
+
+  const matches = await prisma.match.findMany({
+    where: {
+      status:   'UPCOMING',
+      startsAt: { gte: minCutoff },
+    },
+    select: { id: true, teamHome: true, teamAway: true },
+    take: 100,
+  });
+
+  let updated = 0;
+  for (const m of matches) {
+    const odds = await computeMatchOdds(m.teamHome, m.teamAway);
+    if (odds.source !== 'computed') continue;
+
+    await prisma.match.update({
+      where: { id: m.id },
+      data: {
+        oddHome: odds.home,
+        oddDraw: odds.draw,
+        oddAway: odds.away,
+      },
+    });
+    updated++;
+    await sleep(100);
+  }
+
+  if (updated > 0) console.log(`[IMPORTER] Recalculadas odds de ${updated} partidos UPCOMING`);
+  return { updated };
+}
+
+// ─── Auto-resolución ─────────────────────────────────────────────────────────
+
 async function autoResolveMatch(matchId, scoreHome, scoreAway) {
   const result =
     scoreHome > scoreAway ? 'HOME' :
@@ -133,76 +208,173 @@ async function autoResolveMatch(matchId, scoreHome, scoreAway) {
   return resolveMatch(matchId, result, { scoreHome, scoreAway });
 }
 
-// 3. updateLiveScores → actualiza scores de partidos LIVE y resuelve los terminados
+// ─── Actualización de scores en vivo ─────────────────────────────────────────
+
 async function updateLiveScores() {
-  let data;
-  try {
-    data = await fetchJSON(`${API_BASE}/eventslive.php?s=Soccer`);
-  } catch (err) {
-    // La API a veces falla — no rompemos el cron
-    console.error('[IMPORTER] eventslive:', err.message);
-    return { updated: 0, resolved: 0 };
-  }
-
-  const events = data?.events || [];
-  if (!Array.isArray(events) || events.length === 0) {
-    return { updated: 0, resolved: 0 };
-  }
-
   let updated = 0, resolved = 0;
+  const now = new Date();
+  const handledIds = new Set(); // Match.id ya procesados por ESPN
 
-  for (const e of events) {
-    const externalId = e.idEvent;
-    if (!externalId) continue;
+  // ── Paso 1: ESPN scoreboard por liga (primario, más confiable) ──
+  for (const internalLeague of Object.keys(ESPN_LEAGUE_SLUGS)) {
+    const espnEvents = await fetchLeagueScoreboard(internalLeague);
+    if (espnEvents.length === 0) continue;
 
-    const dbMatch = await prisma.match.findUnique({ where: { externalId } });
-    if (!dbMatch) continue;
+    // Trae partidos activos de esta liga
+    const dbMatches = await prisma.match.findMany({
+      where: {
+        league: internalLeague,
+        status: { in: ['LIVE', 'UPCOMING'] },
+      },
+    });
 
-    const scoreHome = parseInt(e.intHomeScore ?? '0', 10) || 0;
-    const scoreAway = parseInt(e.intAwayScore ?? '0', 10) || 0;
-    const progress  = (e.strProgress || '').toLowerCase();
-    const status    = (e.strStatus   || '').toLowerCase();
+    for (const dbMatch of dbMatches) {
+      const espnEv = findMatchingEvent(dbMatch, espnEvents);
+      if (!espnEv) continue;
 
-    const isFinished =
-      progress.includes('ft') || progress.includes('finished') ||
-      status.includes('match finished') || status === 'ft' || status === 'finished';
+      handledIds.add(dbMatch.id);
 
-    if (dbMatch.status === 'UPCOMING' || dbMatch.status === 'LIVE') {
-      // Marca LIVE si aún no lo está y actualiza marcador
-      if (dbMatch.status === 'UPCOMING') {
+      const sh = espnEv.scoreHome;
+      const sa = espnEv.scoreAway;
+      const shouldBeLive = espnEv.isLive || espnEv.isFinished;
+
+      if (shouldBeLive || dbMatch.scoreHome !== sh || dbMatch.scoreAway !== sa) {
         await prisma.match.update({
           where: { id: dbMatch.id },
-          data:  { status: 'LIVE', scoreHome, scoreAway },
+          data: {
+            status:    espnEv.isFinished ? dbMatch.status : (shouldBeLive ? 'LIVE' : dbMatch.status),
+            scoreHome: sh,
+            scoreAway: sa,
+          },
         });
-      } else {
-        await prisma.match.update({
-          where: { id: dbMatch.id },
-          data:  { scoreHome, scoreAway },
-        });
+        updated++;
       }
+
+      if (espnEv.isFinished && dbMatch.status !== 'FINISHED' && dbMatch.status !== 'CANCELLED') {
+        try {
+          await autoResolveMatch(dbMatch.id, sh, sa);
+          resolved++;
+        } catch (err) {
+          console.error(`[IMPORTER] ESPN auto-resolve ${dbMatch.id}:`, err.message);
+        }
+      }
+    }
+
+    await sleep(200);
+  }
+
+  // ── Paso 2: lookupevent.php para partidos NO cubiertos por ESPN ──
+  const remainingActive = await prisma.match.findMany({
+    where: {
+      id:         { notIn: Array.from(handledIds) },
+      status:     { in: ['LIVE', 'UPCOMING'] },
+      externalId: { not: null },
+      startsAt:   { lte: now },
+    },
+  });
+
+  for (const match of remainingActive) {
+    await sleep(200);
+    const info = await lookupEvent(match.externalId);
+    if (!info) continue;
+
+    const sh = info.scoreHome ?? match.scoreHome ?? 0;
+    const sa = info.scoreAway ?? match.scoreAway ?? 0;
+
+    if (info.scoreHome !== null || match.status === 'UPCOMING') {
+      await prisma.match.update({
+        where: { id: match.id },
+        data:  { status: 'LIVE', scoreHome: sh, scoreAway: sa },
+      });
       updated++;
     }
 
-    if (isFinished && dbMatch.status !== 'FINISHED' && dbMatch.status !== 'CANCELLED') {
+    if (info.isFinished) {
       try {
-        await autoResolveMatch(dbMatch.id, scoreHome, scoreAway);
+        await autoResolveMatch(match.id, sh, sa);
         resolved++;
       } catch (err) {
-        console.error(`[IMPORTER] auto-resolve ${dbMatch.id}:`, err.message);
+        console.error(`[IMPORTER] lookup auto-resolve ${match.id}:`, err.message);
       }
+    }
+  }
+
+  // ── Paso 3: fallback por tiempo (cubre partidos manuales o APIs caídas) ──
+  const cutoffTime = new Date(now.getTime() - MATCH_MAX_DURATION_MS);
+  const stuckMatches = await prisma.match.findMany({
+    where: {
+      status:   { in: ['LIVE', 'UPCOMING'] },
+      startsAt: { lte: cutoffTime },
+    },
+  });
+
+  for (const match of stuckMatches) {
+    const sh = match.scoreHome ?? 0;
+    const sa = match.scoreAway ?? 0;
+    console.log(`[IMPORTER] Fallback tiempo: ${match.teamHome} vs ${match.teamAway} (${sh}-${sa})`);
+    try {
+      await autoResolveMatch(match.id, sh, sa);
+      resolved++;
+    } catch (err) {
+      console.error(`[IMPORTER] force-resolve ${match.id}:`, err.message);
     }
   }
 
   if (updated || resolved) {
-    console.log(`[IMPORTER] live: ${updated} actualizados, ${resolved} resueltos automáticamente`);
+    console.log(`[IMPORTER] live: ${updated} actualizados, ${resolved} resueltos`);
   }
   return { updated, resolved };
+}
+
+// ─── Limpieza de partidos viejos ─────────────────────────────────────────────
+async function cleanupOldMatches(days = 7) {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const oldMatches = await prisma.match.findMany({
+    where: {
+      status:     'FINISHED',
+      resolvedAt: { lte: cutoff },
+    },
+    select: { id: true, teamHome: true, teamAway: true },
+  });
+
+  let deleted = 0;
+  for (const match of oldMatches) {
+    try {
+      const pending = await prisma.sportBet.count({
+        where: { matchId: match.id, status: 'PENDING' },
+      });
+      if (pending > 0) continue;
+
+      await prisma.$transaction(async (tx) => {
+        const pbets = await tx.privateBet.findMany({
+          where:  { matchId: match.id },
+          select: { id: true },
+        });
+        for (const pb of pbets) {
+          await tx.privateBetParticipant.deleteMany({ where: { privateBetId: pb.id } });
+        }
+        await tx.privateBet.deleteMany({ where: { matchId: match.id } });
+        await tx.sportBet.deleteMany({ where: { matchId: match.id } });
+        await tx.match.delete({ where: { id: match.id } });
+      });
+
+      deleted++;
+      console.log(`[IMPORTER] Eliminado (${days}d): ${match.teamHome} vs ${match.teamAway}`);
+    } catch (err) {
+      console.error(`[IMPORTER] cleanup ${match.id}:`, err.message);
+    }
+  }
+
+  return { deleted };
 }
 
 module.exports = {
   fetchUpcomingMatches,
   importMatchesToDB,
   updateLiveScores,
+  recomputeUpcomingOdds,
   autoResolveMatch,
+  cleanupOldMatches,
   LEAGUES,
 };

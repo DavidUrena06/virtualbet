@@ -1,13 +1,15 @@
 // cron/scheduler.js
 // Tareas programadas de VirtualBet:
 // 1. Cada minuto: lockea P2P al inicio del partido + expira invitaciones + recargas
-// 2. Cada 2 min: updateLiveScores() — sincroniza scores y auto-resuelve
-// 3. Cada 6 hs: importMatchesToDB() — trae partidos nuevos de TheSportsDB
+// 2. Cada 2 min: updateLiveScores() — ESPN scoreboard → lookupevent → fallback tiempo
+// 3. Cada 6 hs: importMatchesToDB() — trae partidos nuevos + calcula odds dinámicas
+// 4. Cada 6 hs (offset 30m): recomputeUpcomingOdds() — refresca odds por forma reciente
+// 5. Diario 3am UTC: cleanupOldMatches(7) — elimina partidos FINISHED > 7 días
 
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
-const { importMatchesToDB, updateLiveScores } = require('../sports/importer');
+const { importMatchesToDB, updateLiveScores, cleanupOldMatches, recomputeUpcomingOdds } = require('../sports/importer');
 const prisma = new PrismaClient();
 
 // ══════════════════════════════════════════════════════════════
@@ -147,6 +149,26 @@ cron.schedule('0 */6 * * *', async () => {
     await importMatchesToDB();
   } catch (err) {
     console.error('[CRON] importMatchesToDB:', err.message);
+  }
+});
+
+// Cada día a las 3am UTC — elimina partidos FINISHED con más de 7 días
+cron.schedule('0 3 * * *', async () => {
+  try {
+    const { deleted } = await cleanupOldMatches(7);
+    if (deleted > 0) console.log(`[CRON] Limpieza: ${deleted} partidos eliminados`);
+  } catch (err) {
+    console.error('[CRON] cleanupOldMatches:', err.message);
+  }
+});
+
+// Cada 6 horas (offset 30 min para no chocar con importMatchesToDB) — recalcula
+// odds de partidos UPCOMING en base a la forma reciente de los equipos
+cron.schedule('30 */6 * * *', async () => {
+  try {
+    await recomputeUpcomingOdds();
+  } catch (err) {
+    console.error('[CRON] recomputeUpcomingOdds:', err.message);
   }
 });
 
