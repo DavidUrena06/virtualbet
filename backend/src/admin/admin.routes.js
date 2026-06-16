@@ -13,6 +13,7 @@ const {
   resolveMatch,
   deleteMatch,
   importSports,
+  forceSyncSports,
   getStats,
   getAdminLogs,
 } = require('./admin.controller');
@@ -50,6 +51,9 @@ router.delete('/matches/:id',     deleteMatch);
 
 // Importar partidos desde TheSportsDB
 router.post('/sports/import',     importSports);
+
+// Sincronización completa inmediata (import + live scores + recompute odds)
+router.post('/sports/sync-now',   forceSyncSports);
 
 // Stats y logs
 router.get('/stats',              getStats);

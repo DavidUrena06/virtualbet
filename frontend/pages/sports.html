@@ -38,6 +38,54 @@
     .match-card:hover { border-color:var(--border-hover); }
     .match-card.live { border-color: rgba(0,230,118,0.4); }
     .match-card.finished { opacity: 0.78; }
+    .match-card.featured {
+      border-color: rgba(245, 158, 11, 0.45);
+      background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, var(--bg-card) 100%);
+    }
+
+    /* Mundial banner */
+    .mundial-banner {
+      position: relative;
+      background: linear-gradient(135deg, #6d28d9 0%, #db2777 50%, #f59e0b 100%);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.25);
+    }
+    .mundial-banner::before {
+      content: '⚽'; position: absolute; right: -10px; top: -15px;
+      font-size: 7rem; opacity: 0.18;
+    }
+    .mundial-banner__title {
+      font-size: 1.05rem; font-weight: 900; color: #fff;
+      text-transform: uppercase; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mundial-banner__sub  {
+      font-size: 0.82rem; color: rgba(255,255,255,0.92);
+      margin-top: 4px;
+    }
+    .mundial-banner__cta {
+      display: inline-block; margin-top: 10px;
+      background: rgba(0,0,0,0.35); color: #fff;
+      padding: 6px 14px; border-radius: 99px;
+      font-size: 0.78rem; font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.25);
+      cursor: pointer;
+    }
+    .mundial-banner__cta:hover { background: rgba(0,0,0,0.55); }
+
+    /* Daily bonus card */
+    .daily-bonus {
+      background: linear-gradient(135deg, rgba(245,158,11,0.13), rgba(124,58,237,0.13));
+      border: 1px solid rgba(245,158,11,0.35);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px; margin-bottom: 1.25rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .daily-bonus__amount { font-size: 1.4rem; font-weight: 900; color: var(--gold); }
 
     .badge {
       display: inline-flex; align-items: center; gap: 4px;
@@ -113,8 +161,17 @@
 
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
     <h1 style="font-size:1.3rem;font-weight:800;">⚽ Sportsbook</h1>
-    <a href="./p2p.html" class="btn btn--primary btn--sm">🤝 Mis apuestas P2P</a>
+    <div style="display:flex;gap:6px;">
+      <a href="#leaderboard" class="btn btn--ghost btn--sm">🏅 Leaderboard</a>
+      <a href="./p2p.html" class="btn btn--primary btn--sm">🤝 Apuestas P2P</a>
+    </div>
   </div>
+
+  <!-- Mundial banner (solo visible si el evento está activo) -->
+  <div id="mundialBanner" style="display:none;"></div>
+
+  <!-- Daily bonus (solo visible si puede reclamar) -->
+  <div id="dailyBonusCard" style="display:none;"></div>
 
   <!-- Stats rápidos -->
   <div class="stats-grid" style="margin-bottom:1.25rem;">
@@ -149,6 +206,22 @@
     <div style="text-align:center;padding:3rem;color:var(--text-muted);">
       <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
       Cargando partidos...
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard" style="margin-top:2rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;flex-wrap:wrap;gap:8px;">
+      <h2 style="font-size:0.95rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">
+        🏅 Top ganadores de la semana
+      </h2>
+      <div style="display:flex;gap:6px;">
+        <button class="league-tab active" id="lbAll" onclick="loadLeaderboard(false, this)">Todos</button>
+        <button class="league-tab" id="lbMundial" onclick="loadLeaderboard(true, this)">🏆 Mundial</button>
+      </div>
+    </div>
+    <div id="leaderboardList">
+      <div style="text-align:center;padding:1.5rem;color:var(--text-muted);">Cargando...</div>
     </div>
   </div>
 
@@ -277,6 +350,118 @@
       console.error('Init error:', err);
     }
     loadMatches();
+    loadDailyBonus();
+    loadLeaderboard(false);
+
+    // Auto-refresh: cada 30s recarga matches si no hay modal abierto
+    setInterval(() => {
+      if (!document.getElementById('betModal').classList.contains('open')) {
+        loadMatches(true); // silencioso
+      }
+    }, 30000);
+  }
+
+  // ── Mundial banner + daily bonus ────────────────────────────────────────
+  async function loadDailyBonus() {
+    try {
+      const data = await VB.promo.dailyStatus();
+      renderMundialBanner(data);
+      renderDailyBonusCard(data);
+    } catch (err) {
+      console.error('Daily bonus:', err);
+    }
+  }
+
+  function renderMundialBanner(data) {
+    const el = document.getElementById('mundialBanner');
+    if (!data.mundialActive) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div class="mundial-banner">
+        <div class="mundial-banner__title">🏆 Mundial 2026 está en juego</div>
+        <div class="mundial-banner__sub">
+          Bono diario duplicado · Cuotas dinámicas · Apuestas P2P con amigos
+        </div>
+        <button class="mundial-banner__cta" onclick="setLeague('FIFA_WORLD_CUP', document.querySelector('.league-tab:last-child'))">
+          Ver partidos del Mundial →
+        </button>
+      </div>`;
+  }
+
+  function renderDailyBonusCard(data) {
+    const el = document.getElementById('dailyBonusCard');
+    if (!data.canClaim) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const mult = data.mundialMultiplier > 1 ? ` <span style="color:var(--gold);">× Mundial</span>` : '';
+    el.innerHTML = `
+      <div class="daily-bonus">
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">
+            Bono diario · Día ${data.nextStreakDay}${mult}
+          </div>
+          <div class="daily-bonus__amount">+${data.nextAmount} BC</div>
+        </div>
+        <button class="btn btn--orange btn--sm" id="claimDailyBtn" onclick="claimDaily()">
+          🎁 Reclamar ahora
+        </button>
+      </div>`;
+  }
+
+  async function claimDaily() {
+    const btn = document.getElementById('claimDailyBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    try {
+      const data = await VB.promo.dailyClaim();
+      showToast(data.message, 'success');
+      currentBalance = parseFloat(data.newBalance);
+      document.getElementById('balanceDisplay').textContent = currentBalance.toFixed(2) + ' BC';
+      // Re-renderiza navbar balance
+      const nav = document.getElementById('navBalance');
+      if (nav) nav.textContent = currentBalance.toLocaleString('es-CR', { minimumFractionDigits: 2 });
+      loadDailyBonus();
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '🎁 Reclamar ahora'; }
+    }
+  }
+
+  // ── Leaderboard ─────────────────────────────────────────────────────────
+  async function loadLeaderboard(mundialOnly, btnEl) {
+    if (btnEl) {
+      document.querySelectorAll('#lbAll, #lbMundial').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+    }
+    const el = document.getElementById('leaderboardList');
+    el.innerHTML = '<div style="text-align:center;padding:1.25rem;color:var(--text-muted);">Cargando...</div>';
+    try {
+      const data = await VB.promo.leaderboard('week', mundialOnly);
+      if (!data.leaderboard.length) {
+        el.innerHTML = `<div style="text-align:center;padding:1.25rem;color:var(--text-muted);">
+          Aún no hay ganadores ${mundialOnly ? 'en partidos del Mundial' : 'esta semana'}.
+        </div>`;
+        return;
+      }
+      const medals = ['🥇', '🥈', '🥉'];
+      el.innerHTML = data.leaderboard.map(u => `
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:10px 0;border-bottom:1px solid var(--border);gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+            <span style="font-size:1.05rem;width:28px;text-align:center;">
+              ${medals[u.rank - 1] || `#${u.rank}`}
+            </span>
+            <span style="font-size:1.05rem;">${u.avatarEmoji}</span>
+            <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${u.username}
+            </span>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:800;color:var(--green-neon);">+${u.totalProfit.toLocaleString('es-CR')} BC</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">${u.wonBets} apuesta${u.wonBets!==1?'s':''} ganada${u.wonBets!==1?'s':''}</div>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      el.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-muted);">${err.message}</div>`;
+    }
   }
 
   function setLeague(league, el) {
@@ -286,14 +471,17 @@
     loadMatches();
   }
 
-  // Trae UPCOMING + LIVE + FINISHED en paralelo y agrupa por liga
-  async function loadMatches() {
+  // Trae UPCOMING + LIVE + FINISHED en paralelo y agrupa por liga.
+  // silent=true: no muestra spinner (uso de auto-refresh)
+  async function loadMatches(silent = false) {
     const container = document.getElementById('matchList');
-    container.innerHTML = `
-      <div style="text-align:center;padding:2rem;color:var(--text-muted);">
-        <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
-        Cargando...
-      </div>`;
+    if (!silent) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+          <div class="loading-spinner" style="margin:0 auto 0.75rem;"></div>
+          Cargando...
+        </div>`;
+    }
 
     try {
       const [upcoming, live, finished] = await Promise.all([
@@ -322,17 +510,27 @@
       const byGroup = {};
       for (const m of all) {
         const key = m.leagueName || m.league;
-        if (!byGroup[key]) byGroup[key] = { label: leagueDisplay(m), matches: [] };
+        if (!byGroup[key]) byGroup[key] = { league: m.league, label: leagueDisplay(m), matches: [] };
         byGroup[key].matches.push(m);
       }
 
+      // Mundial siempre primero, luego ligas activas (con LIVE), luego el resto
+      const sortedGroups = Object.values(byGroup).sort((a, b) => {
+        if (a.league === 'FIFA_WORLD_CUP' && b.league !== 'FIFA_WORLD_CUP') return -1;
+        if (b.league === 'FIFA_WORLD_CUP' && a.league !== 'FIFA_WORLD_CUP') return 1;
+        const aLive = a.matches.some(m => m.status === 'LIVE') ? 1 : 0;
+        const bLive = b.matches.some(m => m.status === 'LIVE') ? 1 : 0;
+        return bLive - aLive;
+      });
+
       // Renderiza secciones
-      const sections = Object.values(byGroup).map(({ label, matches }) => {
-        const html = matches.map(matchCardHTML).join('');
+      const sections = sortedGroups.map(({ league, label, matches }) => {
+        const html = matches.map(m => matchCardHTML(m, league === 'FIFA_WORLD_CUP')).join('');
+        const star = league === 'FIFA_WORLD_CUP' ? '<span style="color:#f59e0b;">★</span> ' : '';
         return `
           <div class="league-section">
             <div class="league-section__header">
-              <span class="league-section__title">${label}</span>
+              <span class="league-section__title">${star}${label}</span>
               <span class="league-section__count">${matches.length}</span>
             </div>
             ${html}
@@ -341,21 +539,24 @@
 
       container.innerHTML = sections.join('');
     } catch (err) {
-      container.innerHTML = `
-        <div class="match-card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
-          Error al cargar partidos: ${err.message}
-        </div>`;
+      if (!silent) {
+        container.innerHTML = `
+          <div class="match-card" style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+            Error al cargar partidos: ${err.message}
+          </div>`;
+      }
     }
   }
 
   // Renderiza una match-card según status
-  function matchCardHTML(m) {
+  function matchCardHTML(m, featured = false) {
     const isLive     = m.status === 'LIVE';
     const isFinished = m.status === 'FINISHED';
     const isUpcoming = m.status === 'UPCOMING';
     const isAuto     = !!m.externalId;
 
     const badges = [];
+    if (featured)   badges.push(`<span class="badge" style="background:rgba(245,158,11,0.18);color:#fbbf24;">⭐ MUNDIAL</span>`);
     if (isLive)     badges.push(`<span class="badge badge--live">EN VIVO</span>`);
     if (isFinished) badges.push(`<span class="badge badge--final">FINAL</span>`);
     if (isAuto)     badges.push(`<span class="badge badge--auto">AUTO</span>`);
@@ -418,7 +619,7 @@
       </div>` : '';
 
     return `
-      <div class="match-card ${isLive ? 'live' : isFinished ? 'finished' : ''}">
+      <div class="match-card ${isLive ? 'live' : ''} ${isFinished ? 'finished' : ''} ${featured ? 'featured' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
           <div style="min-width:0;flex:1;">
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">${badges.join('')}</div>

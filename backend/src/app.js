@@ -70,6 +70,7 @@ const sportRoutes    = require('./sportsbook/sportsbook.routes');
 const p2pRoutes      = require('./p2p/p2p.routes');
 const adminRoutes    = require('./admin/admin.routes');
 const userRoutes     = require('./routes/user.routes');
+const promoRoutes    = require('./promo/promo.routes');
 
 // Notifications inline para no crear archivo extra
 const { PrismaClient: PC2 } = require('@prisma/client');
@@ -105,6 +106,7 @@ app.use('/api/sports',        sportRoutes);
 app.use('/api/p2p',           p2pRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/user',          userRoutes);
+app.use('/api/promo',         promoRoutes);
 app.use('/api/notifications', notifRouter);
 
 // ── Error handling ────────────────────────────────────────────────────────

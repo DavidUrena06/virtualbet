@@ -181,9 +181,12 @@
     <div class="section" id="section-matches">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
         <h1 style="font-size:1.35rem;font-weight:800;">Partidos</h1>
-        <div style="display:flex;gap:6px;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn--ghost btn--sm" id="syncSportsBtn" onclick="syncSportsNow()">
+            🔄 Sincronizar YA
+          </button>
           <button class="btn btn--ghost btn--sm" id="importSportsBtn" onclick="importSports()">
-            📥 Importar partidos ahora
+            📥 Importar partidos
           </button>
           <button class="btn btn--orange btn--sm" onclick="openMatchModal()">+ Crear partido</button>
         </div>
@@ -461,6 +464,29 @@
   }
 
   // ── IMPORT SPORTS ─────────────────────────────────────────────────────
+  async function syncSportsNow() {
+    const btn = document.getElementById('syncSportsBtn');
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Sincronizando...';
+    try {
+      await VB.admin.syncSportsNow();
+      showToast('Sincronización iniciada. Los scores y odds se actualizarán en 30-60s.', 'success');
+      // Auto-recarga la tabla cada 15s por 90s para que el admin vea los cambios
+      let elapsed = 0;
+      const intv = setInterval(() => {
+        elapsed += 15;
+        loadMatches(matchFilter || 'UPCOMING');
+        if (elapsed >= 90) clearInterval(intv);
+      }, 15000);
+    } catch (err) {
+      showToast(err.message || 'Error al sincronizar', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
   async function importSports() {
     const btn = document.getElementById('importSportsBtn');
     btn.disabled = true;

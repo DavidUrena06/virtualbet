@@ -3,7 +3,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { resolvePrivateBet } = require('../p2p/p2p.controller');
 const { resolveMatch: sharedResolveMatch } = require('../sports/resolver');
-const { importMatchesToDB } = require('../sports/importer');
+const { importMatchesToDB, updateLiveScores, recomputeUpcomingOdds } = require('../sports/importer');
 const prisma = new PrismaClient();
 
 const logAdminAction = async (adminId, action, targetUserId = null, payload = {}, req) => {
@@ -194,6 +194,46 @@ const importSports = async (req, res) => {
   }
 };
 
+// ══ FORCE SYNC (corre import + live + recompute en una sola tanda) ═══════════
+// Útil cuando el admin quiere actualizar scores y cuotas YA sin esperar al cron.
+const forceSyncSports = async (req, res) => {
+  // Devuelve respuesta inmediata para no bloquear UI; el trabajo continúa en bg.
+  res.json({ message: 'Sincronización iniciada en background', started: true });
+
+  // Trabajo async — los errores se loguean, no se devuelven
+  (async () => {
+    const startedAt = Date.now();
+    let importSummary, liveResult, oddsResult;
+    try {
+      importSummary = await importMatchesToDB();
+    } catch (err) {
+      console.error('[ADMIN] forceSync import:', err.message);
+    }
+    try {
+      liveResult = await updateLiveScores();
+    } catch (err) {
+      console.error('[ADMIN] forceSync updateLive:', err.message);
+    }
+    try {
+      oddsResult = await recomputeUpcomingOdds();
+    } catch (err) {
+      console.error('[ADMIN] forceSync recomputeOdds:', err.message);
+    }
+
+    const elapsed = Math.round((Date.now() - startedAt) / 1000);
+    const summary = {
+      durationSec:     elapsed,
+      imported:        importSummary?.imported ?? 0,
+      scoresUpdated:   liveResult?.updated   ?? 0,
+      matchesResolved: liveResult?.resolved  ?? 0,
+      oddsRecomputed:  oddsResult?.updated   ?? 0,
+    };
+    await logAdminAction(req.user.id, 'FORCE_SYNC_SPORTS', null, summary, req)
+      .catch(() => {});
+    console.log(`[ADMIN] forceSync completado en ${elapsed}s:`, summary);
+  })();
+};
+
 // ══ USUARIOS ════════════════════════════════════════════════════════════
 const getAllUsers = async (req, res) => {
   try {
@@ -334,5 +374,5 @@ const getAdminLogs = async (req, res) => {
 module.exports = {
   getAllUsers, giveBetCoins, giveBetCoinsAll, removeBetCoins,
   banUser, unbanUser, createMatch, resolveMatch, deleteMatch, importSports,
-  getStats, getAdminLogs,
+  forceSyncSports, getStats, getAdminLogs,
 };
