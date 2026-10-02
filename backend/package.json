@@ -1,7 +1,7 @@
 {
   "name": "virtualbet-backend",
   "version": "1.0.0",
-  "description": "Casino virtual con moneda ficticia - NGN Costa Rica",
+  "description": "Casino virtual y apuestas deportivas con moneda ficticia (demo)",
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",

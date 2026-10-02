@@ -10,7 +10,13 @@ const prisma = new PrismaClient();
 async function main() {
   const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@virtualbet.com';
   const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  // sin contraseña propia no se crea el admin (nada de contraseñas por defecto)
+  if (!adminPassword || adminPassword.length < 12 || /cambiaesto/i.test(adminPassword)) {
+    console.error('❌ Definí ADMIN_PASSWORD en .env (mínimo 12 caracteres, distinta al ejemplo).');
+    process.exit(1);
+  }
 
   // Verifica si ya existe
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
